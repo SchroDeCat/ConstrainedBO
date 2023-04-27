@@ -1,1 +1,2 @@
-# ConstrainedBO
+# Constrained Bayesian Optimization
+
