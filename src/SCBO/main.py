@@ -21,7 +21,8 @@ from botorch.models.model_list_gp_regression import ModelListGP
 from botorch.test_functions import Ackley
 from botorch.utils.transforms import unnormalize
 
-from SCBO.scbo_botorch import SCBO
+import scbo_botorch
+# from .scbo_botorch import SCBO
 
 warnings.filterwarnings("ignore")
 
@@ -58,10 +59,10 @@ def c2(x):  # Equivalent to enforcing that x[1] >= 0
     return -x[1]
 
 
-scbo = SCBO(fun, [c1, c2], dim=dim, lower_bound=lb, upper_bound=ub, 
+scbo = scbo_botorch.SCBO(fun, [c1, c2], dim=dim, lower_bound=lb, upper_bound=ub, 
                  batch_size = batch_size, n_init=n_init,)
 
-rewards = scbo.optimization(n_iter=100)
+rewards = scbo.optimization(n_iter=100//batch_size)
 # Valid samples must have BOTH c1 <= 0 and c2 <= 0
 
 

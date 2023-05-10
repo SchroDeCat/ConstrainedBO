@@ -16,7 +16,7 @@ import math
 import numpy as np
 import os
 import warnings
-import tqdm
+from tqdm import tqdm
 from dataclasses import dataclass
 
 import gpytorch
@@ -65,23 +65,24 @@ class ScboState:
 
 class SCBO:
     def __init__(self, obj_func, c_func_list, dim:int, lower_bound, upper_bound, 
-                 batch_size:int=1, n_init:int=10,
+                 batch_size:int=1, n_init:int=10, verbose=True,
                 **kwargs):
         self.max_cholesky_size = float("inf") 
         self.dim = dim
-        self.lb = lower_bound
-        self.ub = upper_bound
+        self.lower_bound = lower_bound
+        self.upper_bound = upper_bound
         self.batch_size = batch_size
         self.n_init = n_init
         self.func = obj_func
         self.c_func_list = c_func_list
+        self.verbose = verbose
         self.state = ScboState(dim=dim, batch_size=batch_size)
 
         # get initial data either from input & sampling
         self.discrete = 'train_X' in kwargs and 'x_space' in kwargs
         self.n_constraint = len(c_func_list)
         self.train_X = kwargs.get("train_X", self.get_initial_points(dim, n_init))
-        self.train_Y - kwargs.get("train_Y", self.torch.tensor(
+        self.train_Y = kwargs.get("train_Y", torch.tensor(
                             [self.eval_objective(x) for x in self.train_X], dtype=dtype, device=device
                             ).unsqueeze(-1))
         self.train_C_list = [None for _ in range(self.n_constraint)]
@@ -267,7 +268,6 @@ class SCBO:
             # Generate a batch of candidates
             with gpytorch.settings.max_cholesky_size(self.max_cholesky_size):
                 X_next = self.generate_batch(
-                    state=state,
                     model=model,
                     X=self.train_X,
                     Y=self.train_Y,
@@ -292,7 +292,7 @@ class SCBO:
             C_next = torch.cat(_c_next_list, dim=-1)
 
             # Update TuRBO state
-            state = self.update_state(Y_next, C_next)
+            self.update_state(Y_next, C_next)
 
             # Append data. Note that we append all data, even points that violate
             # the constraints. This is so our constraint models can learn more 
@@ -308,14 +308,14 @@ class SCBO:
             # that no points have been found yet which meet the constraints, it is the 
             # objective value of the point with the minimum constraint violation.
             if self.verbose:
-                _v_info = f"Best value: {state.best_value:.2e}, TR length: {state.length:.2e}"
+                _v_info = f"Best value: {self.state.best_value:.2e}, TR length: {self.state.length:.2e}"
                 process.set_postfix_str(_v_info)
 
         constraint_vals = torch.cat(self.train_C_list, dim=-1)
         bool_tensor = constraint_vals <= 0
         bool_tensor = torch.all(bool_tensor, dim=-1).unsqueeze(-1)
         _raw_reward = self.train_Y.squeeze()
-        self.reward = [_raw_reward[idx].detach().item() if bool_tensor[idx] else 0 for idx in range(_raw_reward.size(0))]
+        self.reward = [_raw_reward[idx].detach().item() if bool_tensor[idx] else _raw_reward.min() for idx in range(_raw_reward.size(0))]
 
         return np.maximum.accumulate(self.reward)
             
