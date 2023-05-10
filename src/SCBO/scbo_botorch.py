@@ -77,7 +77,8 @@ class SCBO:
         self.c_func_list = c_func_list
         self.state = ScboState(dim=dim, batch_size=batch_size)
 
-        self.discrete = 'train_X' in kwargs
+        # get initial data either from input & sampling
+        self.discrete = 'train_X' in kwargs and 'x_space' in kwargs
         self.n_constraint = len(c_func_list)
         self.train_X = kwargs.get("train_X", self.get_initial_points(dim, n_init))
         self.train_Y - kwargs.get("train_Y", self.torch.tensor(
