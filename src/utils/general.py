@@ -32,10 +32,20 @@ from sklearn.manifold import TSNE
 from sklearn.neighbors import NearestNeighbors
 
 
+from torch.quasirandom import SobolEngine
+from botorch.utils.transforms import unnormalize
+from botorch.models.transforms.outcome import Standardize
+
+
+
 def _random_seed_gen(size:int=100):
     np.random.seed(0)
     return np.random.choice(10000, size)
 
+def sample_pts(lb, ub, n_pts:int=10, dim:int=2, seed:int=0):
+    sobol = SobolEngine(dimension=dim, scramble=True, seed=seed)
+    x = sobol.draw(n=n_pts)
+    return unnormalize(x, (lb, ub))
 
 # def beta_CI(lcb, ucb, beta):
 #     """Lower then upper"""

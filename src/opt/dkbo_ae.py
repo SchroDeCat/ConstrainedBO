@@ -57,6 +57,8 @@ class DK_BO_AE():
         self.maximum = torch.max(self.train_y) if max==None else max
         self.init_x = kwargs.get("init_x", self.train_x[:n_init])
         self.init_y = kwargs.get("init_y", self.train_y[:n_init])
+        if "init_x" in kwargs:
+            self.init_x = torch.from_numpy(self.scaler.transform(self.init_x)).float()
         self.spectrum_norm = spectrum_norm
         self.exact = exact_gp # exact GP overide
         self.noise_constraint = noise_constraint

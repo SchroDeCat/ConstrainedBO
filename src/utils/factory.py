@@ -2,7 +2,6 @@ from typing import List
 import numpy as np
 from matplotlib import pyplot as plt
 
-
 class Data_Factory:
     """
     Collections of different objective functions

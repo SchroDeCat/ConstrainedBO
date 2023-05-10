@@ -38,12 +38,10 @@ from sklearn.manifold import TSNE
 from sklearn.neighbors import NearestNeighbors
  
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# STUDY_PARTITION = True
-STUDY_PARTITION = False
 
-def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidence=0.8, optimization_ratio=0.8, n_init=10, n_repeat=2, train_times=10, beta=2, regularize=True, low_dim=True, 
+def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidence=0.8, optimization_ratio=0.8, n_init=10, n_repeat=2, train_times=10, beta=2, regularize=False, low_dim=True, 
             spectrum_norm=False, retrain_interval=1, n_iter=40, filter_interval=1, acq="ci", ci_intersection=True, verbose=True, lr=1e-2, name="test", return_result=True, retrain_nn=True,
-            plot_result=False, save_result=False, save_path=None, fix_seed=False,  pretrained=False, ae_loc=None, study_partition=STUDY_PARTITION, _minimum_pick = 10, 
+            plot_result=False, save_result=False, save_path=None, fix_seed=False,  pretrained=False, ae_loc=None, _minimum_pick = 10, 
             _delta = 0.2, filter_beta=.05, exact_gp=False, constrain_noise=False, local_model=True):
     
     ####### configurations
@@ -109,10 +107,12 @@ def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidenc
             _c_model = DKL(init_x, init_c.squeeze(), n_iter=train_times, low_dim=low_dim, lr=lr, spectrum_norm=spectrum_norm, exact_gp=exact_gp, noise_constraint=global_noise_constraint, pretrained_nn=ae)
             if regularize:
                 _f_model.train_model_kneighbor_collision()
+                _c_model.train_model_kneighbor_collision()
             else:
-                _f_model.train_model(verbose=verbose)
+                _f_model.train_model(verbose=False)
+                _c_model.train_model(verbose=False)
             f_lcb, f_ucb = _f_model.CI(x_tensor.to(DEVICE))
-            c_lcb, c_ucb = _c_model.CI(c_tensor.to(DEVICE))
+            c_lcb, c_ucb = _c_model.CI(x_tensor.to(DEVICE))
 
 
             ####### each test instance
@@ -145,16 +145,16 @@ def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidenc
                 c_roi_filter = _c_filter_ucb >= c_threshold
                 c_uci_filter = c_roi_filter.logical_xor(c_sci_filter) 
                 if sum(c_sci_filter) > 0:
-                    f_roi_filter = _f_filter_ucb >= _f_filter_lcb[c_sci_filter].max() 
+                    f_roi_filter = _f_filter_ucb >= _f_filter_lcb[c_sci_filter.squeeze()].max() 
                 else:
-                    f_roi_filter = _f_filter_ucb >= _f_filter_lcb[feasibility_filter].min()
+                    f_roi_filter = _f_filter_ucb >= _f_filter_lcb[feasibility_filter.squeeze()].min()
                 roi_filter = c_roi_filter.logical_and(f_roi_filter)
 
                 _minimum_pick = 10
                 if sum(roi_filter[observed==1]) <= _minimum_pick:
                     _, indices = torch.topk(c_ucb[observed==1], min(_minimum_pick, data_size))
                     for idx in indices:
-                        roi_filter[util_array[[observed==1]][idx]] = 1
+                        roi_filter[util_array[observed==1][idx]] = 1
                 filter_ratio = roi_filter.sum()/data_size
                 observed_unfiltered = np.min([observed, roi_filter.numpy()], axis=0)      # observed and not filtered outs
                 init_x = x_tensor[observed_unfiltered==1]
@@ -162,8 +162,10 @@ def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidenc
                 init_c = c_tensor[observed_unfiltered==1]
 
                 # TBD: optimization
-                if local_model:
+                if local_model: # allow training a local model and optimize on top of it
                     _f_model_passed_in, _c_model_passed_in = None, None
+                else:
+                    _f_model_passed_in, _c_model_passed_in = _f_model, _c_model
                 _cbo = DK_BO_AE_C(x_tensor, y_tensor, c_tensor, roi_filter, c_uci_filter, optimization_ratio, lr=lr, spectrum_norm=spectrum_norm, low_dim=low_dim,
                                     n_init=n_init,  train_iter=train_times, regularize=regularize, dynamic_weight=False,  retrain_nn=True, c_threshold=c_threshold,
                                     max=max_val, pretrained_nn=ae, verbose=verbose, init_x=init_x, init_y=init_y, init_c=init_c, exact_gp=exact_gp, noise_constraint=roi_noise_constraint,
@@ -201,22 +203,25 @@ def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidenc
                 # f_max_test_x_lcb[roi_filter], f_min_test_x_ucb[roi_filter] = _max_test_x_lcb[roi_filter], _min_test_x_ucb[roi_filter]
                 
                 # two stage optimization, first f and c, then only c.
-                if iter < f_c_total_iter:
-                    interval_query_ceil = f_c_total_iter - iter  
+                if iter < f_c_total_iter or sum(c_uci_filter) == 0:
+                    interval_query_ceil = f_c_total_iter - iter if iter < f_c_total_iter else  n_iter - iter # when c_uci is empty
                     query_num = min(filter_interval, interval_query_ceil) 
+                    assert query_num > 0
                     _acq = 'lcb' if f_c_total_iter - iter <= filter_interval else acq
                     _roi_beta_passed_in = _roi_beta  if not (default_beta) else 0 # allow it to calculate internal ROI_beta
-                    _cbo.query_f_c(n_iter=query_num, acq=_acq, study_interval=10, study_res_path=save_path,  if_tqdm=verbose, retrain_interval=retrain_interval,
-                                    ci_intersection=ci_intersection, f_max_test_x_lcb=f_max_test_x_lcb[roi_filter], f_min_test_x_ucb=f_min_test_x_ucb[roi_filter],
-                                    c_max_test_x_lcb=c_max_test_x_lcb[roi_filter], c_min_test_x_ucb=c_min_test_x_ucb[roi_filter], 
+                    _cbo.query_f_c(n_iter=query_num, acq=_acq, study_interval=10, study_res_path=save_path,  if_tqdm=False, retrain_interval=retrain_interval,
+                                    ci_intersection=ci_intersection, f_max_test_x_lcb=f_max_test_x_lcb, f_min_test_x_ucb=f_min_test_x_ucb,
+                                    c_max_test_x_lcb=c_max_test_x_lcb, c_min_test_x_ucb=c_min_test_x_ucb, 
                                     beta=_roi_beta_passed_in)
                 else:
                     interval_query_ceil =  n_iter - iter
                     query_num = min(filter_interval, interval_query_ceil) 
+                    assert query_num > 0
                     _acq = 'lcb' if f_c_total_iter - iter <= filter_interval else acq
                     _roi_beta_passed_in = _roi_beta  if not (default_beta) else 0 # allow it to calculate internal ROI_beta
-                    _cbo.query_cons(n_iter=query_num, acq=_acq, study_interval=10, study_res_path=save_path,  if_tqdm=verbose, retrain_interval=retrain_interval,
-                                    ci_intersection=ci_intersection, f_max_test_x_lcb=f_max_test_x_lcb[roi_filter], f_min_test_x_ucb=f_min_test_x_ucb[roi_filter], beta=_roi_beta_passed_in)
+                    _cbo.query_cons(n_iter=query_num, acq=_acq, study_interval=10, study_res_path=save_path,  if_tqdm=False, retrain_interval=retrain_interval,
+                                    ci_intersection=ci_intersection, f_max_test_x_lcb=f_max_test_x_lcb, f_min_test_x_ucb=f_min_test_x_ucb, beta=_roi_beta_passed_in,
+                                    c_max_test_x_lcb=c_max_test_x_lcb, c_min_test_x_ucb=c_min_test_x_ucb)
 
                 # update records
                 _step_size = iter + query_num
@@ -234,8 +239,8 @@ def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidenc
                     break
 
                 _filter_gap = _f_filter_ucb.min() - _f_filter_lcb[_f_lcb_filter].max()
-                _iterator_info = {'beta': beta, 'fbeta': filter_beta, "roi_beta": _roi_beta.detach().item(), "regret":reg_record[rep, :_step_size].min(), "Filter Ratio": filter_ratio.detach().item(), 
-                                  "Filter Gap": _filter_gap.detach().item(), 'roi noise': _cbo.dkl.likelihood.noise.detach().item(), 'global noise': _f_model.likelihood.noise.detach().item()}
+                _iterator_info = {'beta': beta, 'fbeta': filter_beta, "roi_beta": _roi_beta, "regret":reg_record[rep, :_step_size].min(), "Filter Ratio": filter_ratio.detach().item(), 
+                                  "Filter Gap": _filter_gap.detach().item(), 'roi noise': _cbo.f_model.likelihood.noise.detach().item(), 'global noise': _f_model.likelihood.noise.detach().item()}
 
                 iterator.set_postfix(_iterator_info)
 
@@ -255,12 +260,12 @@ def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidenc
                     _f_model.train_model_kneighbor_collision()
                     _c_model.train_model_kneighbor_collision()
                 else:
-                    _f_model.train_model(verbose=verbose)
-                    _c_model.train_model(verbose=verbose)
+                    _f_model.train_model(verbose=False)
+                    _c_model.train_model(verbose=False)
 
                 
                 f_lcb, f_ucb = _f_model.CI(x_tensor.to(DEVICE))
-                c_lcb, c_ucb = _c_model.CI(c_tensor.to(DEVICE))
+                c_lcb, c_ucb = _c_model.CI(x_tensor.to(DEVICE))
 
     for rep in range(n_repeat):
         reg_record[rep] = np.minimum.accumulate(reg_record[rep])

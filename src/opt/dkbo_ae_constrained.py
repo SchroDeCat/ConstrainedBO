@@ -38,10 +38,11 @@ class DK_BO_AE_C():
                     n_init:int=10, lr=1e-6, train_iter:int=10, regularize=True, spectrum_norm=False,
                     dynamic_weight=False, verbose=False, max=None, robust_scaling=True, pretrained_nn=None, low_dim=True,
                     record_loss=False, retrain_nn=True, exact_gp=False, noise_constraint=None, **kwargs):
+
         # scale input
         ScalerClass = RobustScaler if robust_scaling else StandardScaler
-        self.scaler = ScalerClass().fit(train_x)
-        train_x = self.scaler.transform(train_x)
+        self.scaler = ScalerClass().fit(x_tensor)
+        x_tensor = self.scaler.transform(x_tensor)
         # init vars
         self.regularize = regularize
         self.lr = lr
@@ -51,17 +52,21 @@ class DK_BO_AE_C():
         self.n_neighbors = min(self.n_init, 10)
         self.Lambda = 1
         self.dynamic_weight = dynamic_weight
-        self.x_tensor = x_tensor.float()
+        self.x_tensor = torch.from_numpy(x_tensor).float()
         self.y_tensor = y_tensor.float()
         self.c_tensor = c_tensor.float()
-        self.data_size = x_tensor.size(0)
+        self.data_size = self.x_tensor.size(0)
         self.train_iter = train_iter
         self.retrain_nn = retrain_nn
         self.maximum = torch.max(self.y_tensor) if max==None else max
         self.max_regret = self.maximum - torch.min(self.y_tensor)
-        self.init_x = kwargs.get("init_x", self.x_tensor[:n_init])
+
+        self.init_x = kwargs.get("init_x", self.x_tensor[:n_init])        
         self.init_y = kwargs.get("init_y", self.y_tensor[:n_init])
         self.init_c = kwargs.get("init_c", self.c_tensor[:n_init])
+        assert self.init_x.size(0) == self.init_c.size(0)
+        if "init_x" in kwargs:
+            self.init_x = torch.from_numpy(self.scaler.transform(self.init_x)).float()
         self.spectrum_norm = spectrum_norm
         self.exact = exact_gp # exact GP overide
         self.noise_constraint = noise_constraint
@@ -114,10 +119,12 @@ class DK_BO_AE_C():
 
         
 
-    def query_f_c(self, n_iter:int=10, acq="ts", retrain_interval:int=1, **kwargs):
+    def query_f_c(self, n_iter:int=10, acq="ci", retrain_interval:int=1, **kwargs):
         '''
         First Stage: Query both f and c simultaneously
         '''
+        assert self.init_x.size(0) == self.init_c.size(0)
+        assert self.init_x.size(0) == self.init_y.size(0)
         self.regret = np.zeros(n_iter)
         if_tqdm = kwargs.get("if_tqdm", False)
         early_stop = kwargs.get("early_stop", True)
@@ -144,22 +151,32 @@ class DK_BO_AE_C():
                                                                         max_test_x_lcb=f_max_test_x_lcb[self.roi_filter], 
                                                                         min_test_x_ucb=f_min_test_x_ucb[self.roi_filter], 
                                                                         acq=acq, beta=beta, return_idx=True)
-                _candidate_idx_c = self.c_model.intersect_CI_next_point(self.x_tensor[self.c_uci_filter], 
-                                                        max_test_x_lcb=c_max_test_x_lcb[self.c_uci_filter], 
-                                                        min_test_x_ucb=c_min_test_x_ucb[self.c_uci_filter], 
-                                                        acq=acq, beta=beta, return_idx=True)
+                if sum(self.c_uci_filter) > 0:
+                    _candidate_idx_c = self.c_model.intersect_CI_next_point(self.x_tensor[self.c_uci_filter], 
+                                                            max_test_x_lcb=c_max_test_x_lcb[self.c_uci_filter], 
+                                                            min_test_x_ucb=c_min_test_x_ucb[self.c_uci_filter], 
+                                                            acq=acq, beta=beta, return_idx=True)
             else:
                 _candidate_idx_f = self.f_model.next_point(self.x_tensor[self.roi_filter], acq, "love", return_idx=True, beta=beta,)
-                _candidate_idx_c = self.c_model.next_point(self.x_tensor[self.c_uci_filter], acq, "love", return_idx=True, beta=beta,)
+                if sum(self.c_uci_filter) > 0:
+                    _candidate_idx_c = self.c_model.next_point(self.x_tensor[self.c_uci_filter], acq, "love", return_idx=True, beta=beta,)
+            
             _f_acq = self.f_model.acq_val[_candidate_idx_f]
-            _c_acq = self.c_model.acq_val[_candidate_idx_c]
+            if sum(self.c_uci_filter) > 0:
+                _c_acq = self.c_model.acq_val[_candidate_idx_c]
         
-            candidate_idx = util_array[self.roi_filter][_candidate_idx_f] if _f_acq >= _c_acq else util_array[self.c_uci_filter][_candidate_idx_c]
+            if sum(self.c_uci_filter) > 0 and _c_acq > _f_acq:
+                candidate_idx = util_array[self.c_uci_filter][_candidate_idx_c]
+            else:
+                candidate_idx = util_array[self.roi_filter][_candidate_idx_f]
+
 
             _candidate_idx_list[i] = candidate_idx
             self.init_x = torch.cat([self.init_x, self.x_tensor[candidate_idx].reshape(1,-1)], dim=0)
             self.init_y = torch.cat([self.init_y, self.y_tensor[candidate_idx].reshape(1,-1)])
             self.init_c = torch.cat([self.init_c, self.c_tensor[candidate_idx].reshape(1,-1)])
+            assert self.init_x.size(0) == self.init_c.size(0)
+            assert self.init_x.size(0) == self.init_y.size(0)
             self.observed[candidate_idx] = 1
 
             # retrain
@@ -196,7 +213,8 @@ class DK_BO_AE_C():
             # regret & early stop
             feasible_obs_filter = self.init_c > self.c_threshold
             if sum(feasible_obs_filter) > 0:
-                self.regret[i] = self.maximum - torch.max(self.init_y[feasible_obs_filter])
+                _max_reward = torch.max(self.init_y[feasible_obs_filter])
+                self.regret[i] = self.maximum - _max_reward
             else:
                 self.regret[i] = self.max_regret
 
