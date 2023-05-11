@@ -45,6 +45,9 @@ def c_fun(x):  # Equivalent to enforcing that x[0] >= 0
     return x[0]
 
 n_init = 10
+n_iter = 100
+train_times = 50
+n_repeat = 30
 max_cholesky_size = float("inf")  # Always use Cholesky
 
 
@@ -56,17 +59,17 @@ init_feasible_filter = c_tensor[:n_init] >= 0
 print(f"initial reward {y_tensor[:n_init][init_feasible_filter]} while global max {y_tensor.max().item()}")
 
 regret = cbo(x_tensor, y_tensor, c_tensor, constraint_threshold=0, constraint_confidence=.5,
-            n_init=10, n_repeat=2, train_times=50, regularize=False, low_dim=True,
-            spectrum_norm=False, retrain_interval=1, n_iter=40, filter_interval=1, acq="ci", 
+            n_init=10, n_repeat=n_repeat, train_times=train_times, regularize=False, low_dim=True,
+            spectrum_norm=False, retrain_interval=1, n_iter=n_iter, filter_interval=1, acq="ci", 
             ci_intersection=True, verbose=True, lr=1e-4, name="test", return_result=True, retrain_nn=True,
             plot_result=True, save_result=True, save_path='./res', fix_seed=True,  pretrained=False, ae_loc=None, 
-            _minimum_pick = 10, _delta = 0.2, beta=0, filter_beta=0.5, exact_gp=False, constrain_noise=True, local_model=False)
+            _minimum_pick = 10, _delta = 0.2, beta=0, filter_beta=0.5, exact_gp=False, constrain_noise=False, local_model=False)
 
 regret = cbo(x_tensor, y_tensor, c_tensor, constraint_threshold=0, constraint_confidence=.5,
-            n_init=10, n_repeat=2, train_times=50, regularize=False, low_dim=True,
-            spectrum_norm=False, retrain_interval=1, n_iter=40, filter_interval=1, acq="ci", 
+            n_init=10, n_repeat=n_repeat, train_times=train_times, regularize=False, low_dim=True,
+            spectrum_norm=False, retrain_interval=1, n_iter=n_iter, filter_interval=1, acq="ci", 
             ci_intersection=True, verbose=True, lr=1e-4, name="test", return_result=True, retrain_nn=True,
             plot_result=True, save_result=True, save_path='./res', fix_seed=True,  pretrained=False, ae_loc=None, 
-            _minimum_pick = 10, _delta = 0.2, beta=0, filter_beta=0.5, exact_gp=True, constrain_noise=True, local_model=False)
+            _minimum_pick = 10, _delta = 0.2, beta=0, filter_beta=0.5, exact_gp=True, constrain_noise=False, local_model=False)
 
 print(f"With constraints, the minimum regret we found is: {regret.min(axis=-1)}")

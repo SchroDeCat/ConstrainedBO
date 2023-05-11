@@ -36,6 +36,8 @@ from torch.quasirandom import SobolEngine
 from botorch.utils.transforms import unnormalize
 from botorch.models.transforms.outcome import Standardize
 
+from ..models import beta_CI
+
 
 
 def _random_seed_gen(size:int=100):
@@ -47,6 +49,23 @@ def sample_pts(lb, ub, n_pts:int=10, dim:int=2, seed:int=0):
     x = sobol.draw(n=n_pts)
     return unnormalize(x, (lb, ub))
 
+def model_list_CI(model_list, x_tensor, DEVICE):
+    lcb_list, ucb_list = [], []
+    for model in model_list:
+        lcb_list_tmp, ucb_list_tmp = model.CI(x_tensor.to(DEVICE))
+        lcb_list.append(lcb_list_tmp), ucb_list.append(ucb_list_tmp)
+    return lcb_list, ucb_list 
+
+def intersecting_ROI_globe(max_all_lcb, min_all_ucb, roi_lcb, roi_ucb, roi_beta, roi_filter, adaptive_scaling=False):
+    roi_lcb_scaled, roi_ucb_scaled = beta_CI(roi_lcb, roi_ucb, roi_beta)   
+    if adaptive_scaling:
+        _lcb_scaling_factor, _ucb_scaling_factor = max_all_lcb[roi_filter].max()/ roi_lcb_scaled[roi_filter].max(), min_all_ucb[roi_filter].max() / roi_lcb_scaled[roi_filter].max()
+    else:
+        _lcb_scaling_factor, _ucb_scaling_factor = 1, 1
+
+    _max_all_lcb, _min_all_ucb = torch.max(max_all_lcb, roi_lcb_scaled * _lcb_scaling_factor), torch.min(min_all_ucb, roi_ucb_scaled * _ucb_scaling_factor) 
+    max_all_lcb[roi_filter], min_all_ucb[roi_filter] = _max_all_lcb[roi_filter], _min_all_ucb[roi_filter]
+    return max_all_lcb, min_all_ucb, roi_lcb_scaled, roi_ucb_scaled
 # def beta_CI(lcb, ucb, beta):
 #     """Lower then upper"""
 #     _ucb_scaled = (ucb - lcb) / 4 * (beta-2) + ucb
