@@ -21,7 +21,7 @@ from botorch.models.model_list_gp_regression import ModelListGP
 from botorch.test_functions import Ackley
 from botorch.utils.transforms import unnormalize
 
-from src.opt import cbo
+from src.opt import cbo, cbo_multi
 from src.utils import sample_pts, feasible_filter_gen
 # from .scbo_botorch import SCBO
 
@@ -39,33 +39,41 @@ fun.bounds[0, :].fill_(-5)
 fun.bounds[1, :].fill_(10)
 dim = fun.dim
 lb, ub = fun.bounds
-n_pts = 20000
+n_pts = 10000
 
-def c_fun(x):  # Equivalent to enforcing that x[0] >= 0
+def c_fun_1(x):  # Equivalent to enforcing that x[0] >= 0
     return x[0]
 
+def c_fun_2(x):  # Equivalent to enforcing that x[0] >= 0
+    return x[1]
+
+c_fun_list = [c_fun_1, c_fun_2]
+c_num = len(c_fun_list)
+
 n_init = 10
-n_iter = 100
+n_iter = 40
 train_times = 5
 n_repeat = 2
 max_cholesky_size = float("inf")  # Always use Cholesky
 
 
-
 x_tensor = sample_pts(lb, ub, n_pts, dim=dim).to(dtype=dtype, device=device)
 y_tensor = torch.tensor([fun(x) for x in x_tensor], dtype=dtype, device=device).unsqueeze(-1)
-c_tensor = torch.tensor([c_fun(x) for x in x_tensor], dtype=dtype, device=device).unsqueeze(-1)
-feasible_filter = feasible_filter_gen([c_tensor], [0])
-print(f"initial reward {y_tensor[:n_init][feasible_filter[:n_init]].squeeze()} while global max {y_tensor[feasible_filter].max().item()}")
+c_tensor_list = [torch.tensor([c_fun_list[c_idx](x) for x in x_tensor], dtype=dtype, device=device).unsqueeze(-1) for c_idx in range(c_num)]
+constraint_threshold_list = torch.zeros(c_num)
+constraint_confidence_list = torch.ones(c_num) * 0.5
+feasible_filter = feasible_filter_gen(c_tensor_list, constraint_threshold_list)
 
-regret = cbo(x_tensor, y_tensor, c_tensor, constraint_threshold=0, constraint_confidence=.5,
+print(f"initial reward {y_tensor[:n_init][feasible_filter[:n_init]]} while global max {y_tensor[feasible_filter].max().item()}")
+
+regret = cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list=constraint_threshold_list, constraint_confidence_list=constraint_confidence_list,
             n_init=10, n_repeat=n_repeat, train_times=train_times, regularize=False, low_dim=True,
             spectrum_norm=False, retrain_interval=1, n_iter=n_iter, filter_interval=1, acq="ci", 
             ci_intersection=True, verbose=True, lr=1e-4, name="test", return_result=True, retrain_nn=True,
             plot_result=True, save_result=True, save_path='./res', fix_seed=True,  pretrained=False, ae_loc=None, 
             _minimum_pick = 10, _delta = 0.2, beta=0, filter_beta=0.5, exact_gp=False, constrain_noise=False, local_model=False)
 
-regret = cbo(x_tensor, y_tensor, c_tensor, constraint_threshold=0, constraint_confidence=.5,
+regret = cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list=constraint_threshold_list, constraint_confidence_list=constraint_confidence_list,
             n_init=10, n_repeat=n_repeat, train_times=train_times, regularize=False, low_dim=True,
             spectrum_norm=False, retrain_interval=1, n_iter=n_iter, filter_interval=1, acq="ci", 
             ci_intersection=True, verbose=True, lr=1e-4, name="test", return_result=True, retrain_nn=True,

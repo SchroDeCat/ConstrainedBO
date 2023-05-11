@@ -18,7 +18,7 @@ import datetime
 import itertools
 
 from ..models import DKL, AE, beta_CI
-from ..utils import save_res, load_res, clustering_methods, model_list_CI, intersecting_ROI_globe
+from ..utils import save_res, load_res, clustering_methods, model_list_CI, intersecting_ROI_globe, feasible_filter_gen
 from .dkbo_olp import DK_BO_OLP
 from .dkbo_ae_constrained import DK_BO_AE_C, DK_BO_AE_C_M
 from math import ceil, floor
@@ -57,7 +57,8 @@ def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidenc
     feasibility_filter = c_tensor > c_threshold
     assert sum(feasibility_filter) > 0
     name = name if low_dim else name+'-hd'
-    max_val = y_tensor.max()
+    feasible_filter = feasible_filter_gen([c_tensor], [c_threshold])
+    max_val = y_tensor[feasible_filter].max()
     reg_record = np.zeros([n_repeat, n_iter])
     ratio_record = np.zeros([n_repeat, n_iter])
     max_LUCB_interval_record = np.zeros([n_repeat, 3, n_iter]) # 0 - Global, 1 - ROI, 2 -- intersection
@@ -354,7 +355,9 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
     
     assert sum(feasibility_filter) > 0
     name = name if low_dim else name+'-hd'
-    max_val = y_tensor.max()
+
+    feasible_filter = feasible_filter_gen(c_tensor_list, c_threshold_list)
+    max_val = y_tensor[feasible_filter].max()
     reg_record = np.zeros([n_repeat, n_iter])
     ratio_record = np.zeros([n_repeat, n_iter])
     max_LUCB_interval_record = np.zeros([n_repeat, 3, n_iter]) # 0 - Global, 1 - ROI, 2 -- intersection
@@ -497,7 +500,7 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
                 else:
                     _f_model_passed_in, _c_model_list_passed_in = _f_model, _c_model_list
                 _cbo_m = DK_BO_AE_C_M(x_tensor, y_tensor, c_tensor_list, roi_filter, c_uci_filter_list, lr=lr, spectrum_norm=spectrum_norm, low_dim=low_dim,
-                                    n_init=n_init,  train_iter=train_times, regularize=regularize, dynamic_weight=False,  retrain_nn=True, c_threshold=c_threshold_list,
+                                    n_init=n_init,  train_iter=train_times, regularize=regularize, dynamic_weight=False,  retrain_nn=True, c_threshold_list=c_threshold_list,
                                     max=max_val, pretrained_nn=ae, verbose=verbose, init_x=init_x, init_y=init_y, init_c_list=init_c_list, exact_gp=exact_gp, noise_constraint=roi_noise_constraint,
                                     f_model=_f_model_passed_in, c_model_list=_c_model_list_passed_in)
 

@@ -28,6 +28,8 @@ from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from sklearn.neighbors import NearestNeighbors
 
+from ..utils import feasible_filter_gen
+
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class DK_BO_AE_C():
@@ -58,7 +60,8 @@ class DK_BO_AE_C():
         self.data_size = self.x_tensor.size(0)
         self.train_iter = train_iter
         self.retrain_nn = retrain_nn
-        self.maximum = torch.max(self.y_tensor) if max==None else max
+        feasible_filter = feasible_filter_gen([c_tensor], [c_threshold])
+        self.maximum = torch.max(self.y_tenso[feasible_filter]) if max==None else max
         self.max_regret = self.maximum - torch.min(self.y_tensor)
 
         self.init_x = kwargs.get("init_x", self.x_tensor[:n_init])        
@@ -316,17 +319,19 @@ class DK_BO_AE_C_M():
         self.dynamic_weight = dynamic_weight
         self.x_tensor = torch.from_numpy(x_tensor).float()
         self.y_tensor = y_tensor.float()
-        self.c_tensor_list = c_tensor_list.float()
+        self.c_tensor_list = [c_tensor.float() for c_tensor in c_tensor_list]
         self.data_size = self.x_tensor.size(0)
         self.train_iter = train_iter
         self.retrain_nn = retrain_nn
-        self.maximum = torch.max(self.y_tensor) if max==None else max
+        feasible_filter = feasible_filter_gen(c_tensor_list, c_threshold_list)
+        self.maximum = torch.max(self.y_tensor[feasible_filter]) if max==None else max
         self.max_regret = self.maximum - torch.min(self.y_tensor)
 
         self.init_x = kwargs.get("init_x", self.x_tensor[:n_init])        
         self.init_y = kwargs.get("init_y", self.y_tensor[:n_init])
         self.init_c_list = kwargs.get("init_c_list", [c_tensor[:n_init] for c_tensor in self.c_tensor_list])
-        assert self.init_x.size(0) == self.init_c.size(0)
+        for c_idx in range(self.c_num):
+            assert self.init_x.size(0) == self.init_c_list[c_idx].size(0)
         if "init_x" in kwargs:
             self.init_x = torch.from_numpy(self.scaler.transform(self.init_x)).float()
         self.spectrum_norm = spectrum_norm
@@ -390,7 +395,7 @@ class DK_BO_AE_C_M():
         '''
         First Stage: Query both f and c simultaneously
         '''
-        assert self.init_x.size(0) == self.init_c.size(0)
+        assert self.init_x.size(0) == self.init_c_list[0].size(0)
         assert self.init_x.size(0) == self.init_y.size(0)
         self.regret = np.zeros(n_iter)
         if_tqdm = kwargs.get("if_tqdm", False)

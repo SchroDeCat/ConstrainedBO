@@ -66,6 +66,17 @@ def intersecting_ROI_globe(max_all_lcb, min_all_ucb, roi_lcb, roi_ucb, roi_beta,
     _max_all_lcb, _min_all_ucb = torch.max(max_all_lcb, roi_lcb_scaled * _lcb_scaling_factor), torch.min(min_all_ucb, roi_ucb_scaled * _ucb_scaling_factor) 
     max_all_lcb[roi_filter], min_all_ucb[roi_filter] = _max_all_lcb[roi_filter], _min_all_ucb[roi_filter]
     return max_all_lcb, min_all_ucb, roi_lcb_scaled, roi_ucb_scaled
+
+def feasible_filter_gen(c_tensor_list, threshold_list):
+    n_pts = c_tensor_list[0].size(0)
+    c_num = len(c_tensor_list)
+    feasible_filter = torch.tensor([True for _ in range(n_pts)]).squeeze()
+    
+    for c_idx in range(c_num):
+        _tmp_filter = c_tensor_list[c_idx] >= threshold_list[c_idx]
+        feasible_filter = feasible_filter.logical_and(_tmp_filter.squeeze())
+    return feasible_filter
+
 # def beta_CI(lcb, ucb, beta):
 #     """Lower then upper"""
 #     _ucb_scaled = (ucb - lcb) / 4 * (beta-2) + ucb
