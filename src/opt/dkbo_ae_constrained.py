@@ -496,7 +496,7 @@ class DK_BO_AE_C_M():
                 self.f_loss_record["DK"].append(self._f_pure_dkl.mae_record[-1])
 
             # regret & early stop
-            feasible_obs_filter = self.init_c > self.c_threshold
+            feasible_obs_filter = feasible_filter_gen(self.init_c_list, self.c_threshold_list)
             if sum(feasible_obs_filter) > 0:
                 _max_reward = torch.max(self.init_y[feasible_obs_filter])
                 self.regret[i] = self.maximum - _max_reward

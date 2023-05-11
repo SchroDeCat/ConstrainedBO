@@ -443,7 +443,7 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
                     f_max_test_x_lcb, f_min_test_x_ucb = torch.max(_f_lcb, f_max_test_x_lcb), torch.min(_f_ucb, f_min_test_x_ucb)
                     for c_idx in range(c_num):
                         c_max_test_x_lcb_list[c_idx], c_min_test_x_ucb_list[c_idx] = torch.max(_c_lcb_list[c_idx], c_max_test_x_lcb_list[c_idx]), torch.min(_c_ucb_list[c_idx], c_min_test_x_ucb_list[c_idx])
-                        assert f_max_test_x_lcb[c_idx].size(0) == data_size and f_min_test_x_ucb[c_idx].size(0) == data_size
+                        assert f_max_test_x_lcb.size(0) == data_size and f_min_test_x_ucb.size(0) == data_size
                         assert c_max_test_x_lcb_list[c_idx].size(0) == data_size and c_min_test_x_ucb_list[c_idx].size(0) == data_size
                         
                 # Identify f_roi, csi, cui, c_roi, and general ROI
@@ -567,7 +567,7 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
                             n_iter=train_times, low_dim=low_dim, pretrained_nn=ae, retrain_nn=retrain_nn, lr=lr, spectrum_norm=spectrum_norm,
                             exact_gp=exact_gp, noise_constraint=global_noise_constraint)
                 
-                _c_model_list = [DKL([observed==1], c_tensor_list[c_idx][observed==1].squeeze() if sum(observed) > 1 else c_tensor_list[c_idx][observed==1], 
+                _c_model_list = [DKL(x_tensor[observed==1], c_tensor_list[c_idx][observed==1].squeeze() if sum(observed) > 1 else c_tensor_list[c_idx][observed==1], 
                                      n_iter=train_times, low_dim=low_dim, lr=lr, spectrum_norm=spectrum_norm, 
                                      exact_gp=exact_gp, noise_constraint=global_noise_constraint, pretrained_nn=ae) for c_idx in range(c_num)]
 

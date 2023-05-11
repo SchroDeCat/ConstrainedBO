@@ -64,7 +64,7 @@ constraint_threshold_list = torch.zeros(c_num)
 constraint_confidence_list = torch.ones(c_num) * 0.5
 feasible_filter = feasible_filter_gen(c_tensor_list, constraint_threshold_list)
 
-print(f"initial reward {y_tensor[:n_init][feasible_filter[:n_init]]} while global max {y_tensor[feasible_filter].max().item()}")
+print(f"initial reward {y_tensor[:n_init][feasible_filter[:n_init]].squeeze()} while global max {y_tensor[feasible_filter].max().item()}")
 
 regret = cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list=constraint_threshold_list, constraint_confidence_list=constraint_confidence_list,
             n_init=10, n_repeat=n_repeat, train_times=train_times, regularize=False, low_dim=True,
