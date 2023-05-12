@@ -192,12 +192,13 @@ class SCBO:
 
     def generate_batch(   
         self,
-        model,  # GP model
-        X,  # Evaluated points on the domain [0, 1]^d
-        Y,  # Function values
+        model,          # GP model
+        X,              # Evaluated points on the domain [0, 1]^d
+        Y,              # Function values
         batch_size,
-        n_candidates,  # Number of candidates for Thompson sampling
+        n_candidates,   # Number of candidates for Thompson sampling
         constraint_model,
+        X_space=None,   # Discrete Search space
     ):
         assert X.min() >= 0.0 and X.max() <= 1.0 and torch.all(torch.isfinite(Y))
 
@@ -208,21 +209,26 @@ class SCBO:
         tr_lb = torch.clamp(x_center - state.length / 2.0, 0.0, 1.0)
         tr_ub = torch.clamp(x_center + state.length / 2.0, 0.0, 1.0)
 
-        # Thompson Sampling w/ Constraints (SCBO)
-        dim = X.shape[-1]
-        sobol = SobolEngine(dim, scramble=True)
-        pert = sobol.draw(n_candidates).to(dtype=dtype, device=device)
-        pert = tr_lb + (tr_ub - tr_lb) * pert
+        #### Thompson Sampling w/ Constraints (SCBO)
+        if X_space is None:
+            dim = X.shape[-1]
+            sobol = SobolEngine(dim, scramble=True)
+            pert = sobol.draw(n_candidates).to(dtype=dtype, device=device)
+            pert = tr_lb + (tr_ub - tr_lb) * pert
 
-        # Create a perturbation mask
-        prob_perturb = min(20.0 / dim, 1.0)
-        mask = torch.rand(n_candidates, dim, dtype=dtype, device=device) <= prob_perturb
-        ind = torch.where(mask.sum(dim=1) == 0)[0]
-        mask[ind, torch.randint(0, dim - 1, size=(len(ind),), device=device)] = 1
+            # Create a perturbation mask
+            prob_perturb = min(20.0 / dim, 1.0)
+            mask = torch.rand(n_candidates, dim, dtype=dtype, device=device) <= prob_perturb
+            ind = torch.where(mask.sum(dim=1) == 0)[0]
+            mask[ind, torch.randint(0, dim - 1, size=(len(ind),), device=device)] = 1 # guarantee at least one perturbation
 
-        # Create candidate points from the perturbations and the mask
-        X_cand = x_center.expand(n_candidates, dim).clone()
-        X_cand[mask] = pert[mask]
+            # Create candidate points from the perturbations and the mask
+            X_cand = x_center.expand(n_candidates, dim).clone() # clone n_cand times  
+            X_cand[mask] = pert[mask]                           # apply the probability perturbation
+        else:
+            _filter = torch.all(X_space >= tr_lb, dim=-1).logical_and(torch.all(X_space <= tr_ub, dim=-1))
+            assert _filter.sum() > 0
+            X_cand = X_space[_filter]
 
         # Sample on the candidate points using Constrained Max Posterior Sampling
         constrained_thompson_sampling = ConstrainedMaxPosteriorSampling(
@@ -256,7 +262,7 @@ class SCBO:
 
         return model
 
-    def optimization(self, n_iter):
+    def optimization(self, n_iter, **kwargs):
         process = tqdm(range(n_iter)) if self.verbose else range(n_iter)
 
         for _ in process:
@@ -274,6 +280,7 @@ class SCBO:
                     batch_size=self.batch_size,
                     n_candidates=2000,
                     constraint_model=ModelListGP(*c_model_list),
+                    X_space=kwargs.get("x_tensor", None)
                 )
 
             # Evaluate both the objective and constraints for the selected candidaates
