@@ -437,7 +437,8 @@ class DK_BO_AE_C_M():
                 _candidate_idx_f = self.f_model.next_point(self.x_tensor[self.roi_filter], acq, "love", return_idx=True, beta=beta,)
                 for c_idx, c_uci_filter in enumerate(self.c_uci_filter_list):
                     if sum(c_uci_filter) > 0:
-                        _candidate_idx_c = self.c_model.next_point(self.x_tensor[c_uci_filter], acq, "love", return_idx=True, beta=beta,)
+                        _candidate_idx_c = self.c_model_list[c_idx].next_point(self.x_tensor[c_uci_filter], acq, "love", return_idx=True, beta=beta,)
+                        _candidate_idx_c_list[c_idx] = _candidate_idx_c
             
             # locate max acq
             _f_acq = self.f_model.acq_val[_candidate_idx_f]

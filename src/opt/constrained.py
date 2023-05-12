@@ -46,6 +46,7 @@ def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidenc
     
     ####### configurations
     if constrain_noise:
+        # global_noise_constraint = gpytorch.constraints.Interval(1e-8, 1e-3)
         global_noise_constraint = gpytorch.constraints.Interval(0.1,.6)
         roi_noise_constraint = gpytorch.constraints.Interval(1e-5,0.1)
         name = f"{name}-noise_c"
@@ -339,7 +340,8 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
     '''
     ####### configurations
     if constrain_noise:
-        global_noise_constraint = gpytorch.constraints.Interval(0.1,.6)
+        global_noise_constraint = gpytorch.constraints.Interval(1e-8, 1e-3)
+        # global_noise_constraint = gpytorch.constraints.Interval(0.1,.6)
         roi_noise_constraint = gpytorch.constraints.Interval(1e-5,0.1)
         name = f"{name}-noise_c"
     else:

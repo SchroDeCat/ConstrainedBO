@@ -19,6 +19,10 @@ import warnings
 from tqdm import tqdm
 from dataclasses import dataclass
 
+import sys
+sys.path.append(f"{os.path.dirname(__file__)}/..")
+from models import DKL
+
 import gpytorch
 import torch
 from gpytorch.constraints import Interval
@@ -31,7 +35,8 @@ from torch.quasirandom import SobolEngine
 from botorch.fit import fit_gpytorch_mll
 # Constrained Max Posterior Sampling s a new sampling class, similar to MaxPosteriorSampling,
 # which implements the constrained version of Thompson Sampling described in [1].
-from botorch.generation.sampling import ConstrainedMaxPosteriorSampling
+# from botorch.generation.sampling import ConstrainedMaxPosteriorSampling
+from sampling import ConstrainedMaxPosteriorSampling
 from botorch.models import SingleTaskGP
 from botorch.models.model_list_gp_regression import ModelListGP
 from botorch.test_functions import Ackley
@@ -65,7 +70,7 @@ class ScboState:
 
 class SCBO:
     def __init__(self, obj_func, c_func_list, dim:int, lower_bound, upper_bound, 
-                 batch_size:int=1, n_init:int=10, verbose=True,
+                 batch_size:int=1, n_init:int=10, verbose=True, dk=False, constrain_noise=True,
                 **kwargs):
         self.max_cholesky_size = float("inf") 
         self.dim = dim
@@ -76,6 +81,10 @@ class SCBO:
         self.func = obj_func
         self.c_func_list = c_func_list
         self.verbose = verbose
+        self.dk = dk
+        if self.dk:
+            self.train_times = kwargs.get("train_times", 50)
+        self.constrain_noise = constrain_noise
         self.state = ScboState(dim=dim, batch_size=batch_size)
 
         # get initial data either from input & sampling
@@ -241,13 +250,26 @@ class SCBO:
 
 
     def get_fitted_model(self, X, Y):
+        global_noise_constraint = Interval(1e-8, 1e-3)
+
+        if self.dk:
+            dk = DKL(X.float(), Y.float().squeeze(), n_iter=self.train_times, lr=1e-4, low_dim=True, 
+                pretrained_nn=None,  exact_gp=False, 
+                noise_constraint = None if not self.constrain_noise else global_noise_constraint)
+            dk.train_model(verbose=False)
+            return dk.model
+        
         dim = self.dim
-        likelihood = GaussianLikelihood(noise_constraint=Interval(1e-8, 1e-3))
+        # global_noise_constraint = gpytorch.constraints.Interval(0.1,.6)
+
+        likelihood = GaussianLikelihood(noise_constraint=global_noise_constraint)
+        # likelihood = GaussianLikelihood(noise_constraint=Interval(1e-8, 1e-3))
         covar_module = ScaleKernel(  # Use the same lengthscale prior as in the TuRBO paper
             MaternKernel(
                 nu=2.5, ard_num_dims=dim, lengthscale_constraint=Interval(0.005, 4.0)
-            )
-        )
+            ))
+        # covar_module = gpytorch.kernels.ScaleKernel(gpytorch.kernels.RBFKernel())
+        
         model = SingleTaskGP(
             X,
             Y,
@@ -258,7 +280,7 @@ class SCBO:
         mll = ExactMarginalLogLikelihood(model.likelihood, model)
 
         with gpytorch.settings.max_cholesky_size(self.max_cholesky_size):
-            fit_gpytorch_mll(mll)
+            fit_gpytorch_mll(mll, max_attempts=100)
 
         return model
 
@@ -281,7 +303,7 @@ class SCBO:
                     n_candidates=2000,
                     constraint_model=ModelListGP(*c_model_list),
                     X_space=kwargs.get("x_tensor", None)
-                )
+                ).reshape([-1, self.dim])
 
             # Evaluate both the objective and constraints for the selected candidaates
             Y_next = torch.tensor(

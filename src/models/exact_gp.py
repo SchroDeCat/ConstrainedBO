@@ -14,7 +14,12 @@ class ExactGPRegressionModel(gpytorch.models.ExactGP):
             super(ExactGPRegressionModel, self).__init__(train_x, train_y, gp_likelihood)
             # self.mean_module = gpytorch.means.ZeroMean()
             if low_dim:
-                self.covar_module = gpytorch.kernels.ScaleKernel(gpytorch.kernels.RBFKernel())
+                # self.covar_module = gpytorch.kernels.ScaleKernel(gpytorch.kernels.RBFKernel())
+                self.covar_module = gpytorch.kernels.ScaleKernel(  # Use the same lengthscale prior as in the TuRBO paper
+                    gpytorch.kernels.MaternKernel(
+                    nu=2.5, ard_num_dims=train_x.size(-1), 
+                    lengthscale_constraint=gpytorch.constraints.Interval(0.005, 4.0)
+                ))
             else:
                 self.covar_module = gpytorch.kernels.LinearKernel(num_dims=train_x.size(-1))
             try: # gpytorch 1.6.0 support

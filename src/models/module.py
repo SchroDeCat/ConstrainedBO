@@ -14,6 +14,8 @@ import datetime
 import itertools
 
 # from src.utils import beta_CI
+from typing import Any, List, NoReturn, Optional, Union
+
 from .exact_gp import ExactGPRegressionModel
 from .sgld import SGLD
 from sparsemax import Sparsemax
@@ -29,6 +31,12 @@ from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from sklearn.neighbors import NearestNeighbors
+
+from botorch.posteriors.gpytorch import GPyTorchPosterior
+from botorch.models.utils import gpt_posterior_settings
+from botorch.models.model import Model
+
+
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -76,3 +84,41 @@ class GPRegressionModel(gpytorch.models.ExactGP):
             mean_x = self.mean_module(self.projected_x)
             covar_x = self.covar_module(self.projected_x)
             return gpytorch.distributions.MultivariateNormal(mean_x, covar_x)
+        
+        def posterior(
+            self,
+            X: torch.Tensor,
+            observation_noise: Union[bool, torch.Tensor] = False,
+            **kwargs: Any,
+        ) -> GPyTorchPosterior:
+            r"""Computes the posterior over model outputs at the provided points.
+
+            Args:
+                X: A `(batch_shape) x q x d`-dim Tensor, where `d` is the dimension
+                    of the feature space and `q` is the number of points considered
+                    jointly.
+                observation_noise: If True, add the observation noise from the
+                    likelihood to the posterior. If a Tensor, use it directly as the
+                    observation noise (must be of shape `(batch_shape) x q`).
+
+            Returns:
+                A `GPyTorchPosterior` object, representing a batch of `b` joint
+                distributions over `q` points. Includes observation noise if
+                specified.
+            """
+            self.eval()  # make sure model is in eval mode
+            # input transforms are applied at `posterior` in `eval` mode, and at
+            # `model.forward()` at the training time
+            # X = self.model(X)
+            # with gpt_posterior_settings():
+            mvn = self.forward(X.float())
+
+            posterior = mvn
+            # posterior = GPyTorchPosterior(distribution=mvn)
+            return posterior
+        
+        def _set_transformed_inputs(self):
+            pass
+
+        def input_transform(self, X):
+            return X

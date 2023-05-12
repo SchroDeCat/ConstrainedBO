@@ -14,6 +14,9 @@ import datetime
 import itertools
 
 # from src.utils import beta_CI
+
+from typing import Any, List, NoReturn, Optional, Union
+
 from .exact_gp import ExactGPRegressionModel
 from .module import LargeFeatureExtractor, GPRegressionModel
 from .sgld import SGLD
@@ -31,6 +34,11 @@ from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from sklearn.neighbors import NearestNeighbors
 
+from botorch.posteriors.gpytorch import GPyTorchPosterior
+from botorch.models.utils import gpt_posterior_settings
+
+
+
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -45,6 +53,7 @@ class DKL():
     def __init__(self, train_x, train_y, n_iter=2, lr=1e-6, output_scale=.7, low_dim=False, 
                  pretrained_nn=None, test_split=False, retrain_nn=True, spectrum_norm=False, exact_gp=False, 
                  noise_constraint=None):
+        super().__init__()
         self.training_iterations = n_iter
         self.lr = lr
         self.train_x = train_x
@@ -341,10 +350,12 @@ class DKL():
         test_x_selection = None
         if self.exact and test_x.size(0) > 1000:
             test_x_selection = np.random.choice(test_x.size(0), 1000)
-            test_x = test_x[test_x_selection]
+            _test_x = test_x[test_x_selection]
+        else:
+            _test_x = test_x.clone()
 
         if self.cuda:
-          test_x = test_x.cuda()
+          _test_x = _test_x.cuda()
 
         if acq.lower() in ["ts", 'qei']:
             '''
@@ -360,12 +371,12 @@ class DKL():
                     # NEW FLAG FOR SAMPLING
                     with gpytorch.settings.fast_pred_samples():
                         # start_time = time.time()
-                        samples = self.model(test_x).rsample(torch.Size([_num_sample]))
+                        samples = self.model(_test_x).rsample(torch.Size([_num_sample]))
                         # fast_sample_time_no_cache = time.time() - start_time
             elif method.lower() == "ciq":
                 with torch.no_grad(), gpytorch.settings.ciq_samples(True), gpytorch.settings.num_contour_quadrature(10), gpytorch.settings.minres_tolerance(1e-4):
                         # start_time = time.time()
-                        samples = self.likelihood(self.model(test_x)).rsample(torch.Size([_num_sample]))
+                        samples = self.likelihood(self.model(_test_x)).rsample(torch.Size([_num_sample]))
                         # fast_sample_time_no_cache = time.time() - start_time
             else:
                 raise NotImplementedError(f"sampling method {method} not implemented")
@@ -381,7 +392,7 @@ class DKL():
 
         elif acq.lower() in ["ucb", 'ci', 'lcb', 'rci']:
             with torch.no_grad(), gpytorch.settings.fast_pred_var():
-                observed_pred = self.likelihood(self.model(test_x))
+                observed_pred = self.likelihood(self.model(_test_x))
                 lower, upper = observed_pred.confidence_region()
                 lower, upper = beta_CI(lower, upper, beta)
 
@@ -396,18 +407,18 @@ class DKL():
         elif acq.lower() == 'truvar':
             # print("enter next point truvar")
             with torch.no_grad(), gpytorch.settings.fast_pred_var():
-                observed_pred = self.likelihood(self.model(test_x))
+                observed_pred = self.likelihood(self.model(_test_x))
                 lower, upper = observed_pred.confidence_region()
                 lower, upper = beta_CI(lower, upper, beta)
                 pred_mean = (lower + upper) / 2
 
-            self.acq_val = torch.zeros(test_x.size(0))
-            for idx in range(test_x.size(0)):
-                tmp_x = torch.cat([self.train_x, test_x[idx].reshape([1,-1])], dim=0)
+            self.acq_val = torch.zeros(_test_x.size(0))
+            for idx in range(_test_x.size(0)):
+                tmp_x = torch.cat([self.train_x, _test_x[idx].reshape([1,-1])], dim=0)
                 tmp_y = torch.cat([self.train_y, pred_mean[idx].reshape([1,])])
                 _tmp_model = self.GPRegressionModel(tmp_x, tmp_y, self.likelihood, self.feature_extractor).eval()
                 with torch.no_grad(), gpytorch.settings.fast_pred_var():
-                    _tmp_observed_pred = self.likelihood(_tmp_model(test_x))
+                    _tmp_observed_pred = self.likelihood(_tmp_model(_test_x))
                     _tmp_lower, _tmp_upper = _tmp_observed_pred.confidence_region()
                     _tmp_lower, _tmp_upper = beta_CI(_tmp_lower, _tmp_upper, beta)
                 self.acq_val[idx] = torch.sum(_tmp_lower - lower) + torch.sum(upper - _tmp_upper)
@@ -416,18 +427,21 @@ class DKL():
         elif acq.lower() in ['pred']:
             # Pure exploitation with predicted mean as the acquisition function.
             with torch.no_grad(), gpytorch.settings.fast_pred_var():
-                observed_pred = self.likelihood(self.model(test_x))
+                observed_pred = self.likelihood(self.model(_test_x))
                 self.acq_val = observed_pred.mean
                 # print(self.acq_val)
         else:
             raise NotImplementedError(f"acq {acq} not implemented")
 
         max_pts = torch.argmax(self.acq_val)
-        candidate = test_x[max_pts]
+        candidate = _test_x[max_pts]
         if return_idx:
             if test_x_selection is None:
                 return max_pts
             else:
+                _acq_val = torch.zeros(test_x.size(0))
+                _acq_val[test_x_selection] = self.acq_val
+                self.acq_val = _acq_val
                 return test_x_selection[max_pts]
         else:
             return candidate

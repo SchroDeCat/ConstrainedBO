@@ -52,6 +52,7 @@ batch_size = 1
 # n_init = 2 * dim
 n_init = 10
 n_pts = 20000
+n_repeat = 10
 max_cholesky_size = float("inf")  # Always use Cholesky
 sobol = SobolEngine(dimension=dim, scramble=True, seed=0)
 x_tensor = sobol.draw(n=n_pts).to(device=device, dtype=dtype)
@@ -75,6 +76,9 @@ def c1(x):  # Equivalent to enforcing that x[0] >= 0
 def c2(x):  # Equivalent to enforcing that x[1] >= 0
     return -x[1]
 
+def c3(x):  # Equivalent to enforcing that x[1] >= 0
+    return -x[2] + x[3]
+
 # for c_tensor only
 def c_fun_1(x):  # Equivalent to enforcing that x[0] >= 0
     return x[0]
@@ -82,7 +86,10 @@ def c_fun_1(x):  # Equivalent to enforcing that x[0] >= 0
 def c_fun_2(x):  # Equivalent to enforcing that x[0] >= 0
     return x[1]
 
-c_fun_list = [c_fun_1, c_fun_2]
+def c_fun_3(x):  # Equivalent to enforcing that x[0] >= 0
+    return x[2] - x[3]
+
+c_fun_list = [c_fun_1, c_fun_2, c_fun_3]
 c_num = len(c_fun_list)
 c_tensor_list = [torch.tensor([c_fun_list[c_idx](unnormalize(x, (lb, ub))) for x in x_tensor], dtype=dtype, device=device).unsqueeze(-1) for c_idx in range(c_num)]
 constraint_threshold_list = torch.zeros(c_num)
@@ -95,8 +102,9 @@ max_global = y_tensor[feasible_filter].max().item()
 print(f"Feasible Y {init_feasible_reward}")
 print(f"Before Optimization the best value is: {max_reward:.4f} / global opt {max_global:.4f} := regret {max_global - max_reward:.4f} ")
 
-scbo = scbo_botorch.SCBO(fun, [c1, c2], dim=dim, lower_bound=lb, upper_bound=ub, 
-                 batch_size = batch_size, n_init=n_init, train_X = x_tensor[:n_init])
+
+scbo = scbo_botorch.SCBO(fun, [c1, c2, c3], dim=dim, lower_bound=lb, upper_bound=ub, 
+                 batch_size = batch_size, n_init=n_init, train_X = x_tensor[:n_init], dk=True)
 
 rewards = scbo.optimization(n_iter=100//batch_size, x_tensor=x_tensor)
 # Valid samples must have BOTH c1 <= 0 and c2 <= 0
