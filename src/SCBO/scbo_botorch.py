@@ -84,6 +84,7 @@ class SCBO:
         self.dk = dk
         if self.dk:
             self.train_times = kwargs.get("train_times", 50)
+            self.learning_rate = kwargs.get("lr", 1e-4)
         self.constrain_noise = constrain_noise
         self.state = ScboState(dim=dim, batch_size=batch_size)
 
@@ -253,7 +254,7 @@ class SCBO:
         global_noise_constraint = Interval(1e-8, 1e-3)
 
         if self.dk:
-            dk = DKL(X.float(), Y.float().squeeze(), n_iter=self.train_times, lr=1e-4, low_dim=True, 
+            dk = DKL(X.float(), Y.float().squeeze(), n_iter=self.train_times, lr=self.learning_rate, low_dim=True, 
                 pretrained_nn=None,  exact_gp=False, 
                 noise_constraint = None if not self.constrain_noise else global_noise_constraint)
             dk.train_model(verbose=False)
@@ -343,7 +344,7 @@ class SCBO:
         constraint_vals = torch.cat(self.train_C_list, dim=-1)
         bool_tensor = constraint_vals <= 0
         bool_tensor = torch.all(bool_tensor, dim=-1).unsqueeze(-1)
-        _raw_reward = self.train_Y.squeeze()
+        _raw_reward = self.train_Y.squeeze() 
         self.reward = [_raw_reward[idx].detach().item() if bool_tensor[idx] else _raw_reward.min() for idx in range(_raw_reward.size(0))]
 
         return np.maximum.accumulate(self.reward)

@@ -4,6 +4,7 @@ Utilities to support exps
 
 import gpytorch
 import os
+import sys
 import random
 import torch
 import tqdm
@@ -36,7 +37,8 @@ from torch.quasirandom import SobolEngine
 from botorch.utils.transforms import unnormalize
 from botorch.models.transforms.outcome import Standardize
 
-from ..models import beta_CI
+sys.path.append(f"{os.path.dirname(__file__)}/..")
+from models import beta_CI
 
 
 

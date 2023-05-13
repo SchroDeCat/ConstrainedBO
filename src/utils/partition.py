@@ -3,6 +3,7 @@ All necessary functions for the partition
 """
 import gpytorch
 import os
+import sys
 import random
 import torch
 import tqdm
@@ -16,7 +17,9 @@ import matplotlib as mpl
 import datetime
 import itertools
 
-from ..models import DKL
+sys.path.append(f"{os.path.dirname(__file__)}/..")
+
+from models import DKL
 
 from sparsemax import Sparsemax
 from scipy.stats import ttest_ind

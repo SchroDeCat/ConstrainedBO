@@ -144,7 +144,7 @@ class DKL():
         # "Loss" for GPs - the marginal log likelihood
         self.mll = gpytorch.mlls.ExactMarginalLogLikelihood(self.likelihood, self.model)
         if loss_type.lower() == "nll":
-            self.loss_func = lambda pred, y: -self.mll(pred, y)
+            self.loss_func = lambda posterior, y: -self.mll(posterior, y)
         elif loss_type.lower() == "mse":
             tmp_loss = torch.nn.MSELoss()
             self.loss_func = lambda pred, y: tmp_loss(pred.mean, y)

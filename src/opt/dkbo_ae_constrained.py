@@ -121,7 +121,6 @@ class DK_BO_AE_C():
                 self.c_model.train_model(verbose=False)
 
         
-
     def query_f_c(self, n_iter:int=10, acq="ci", retrain_interval:int=1, **kwargs):
         '''
         First Stage: Query both f and c simultaneously
@@ -389,7 +388,54 @@ class DK_BO_AE_C_M():
                 for c_idx in range(self.c_num):
                     self.c_model_list[c_idx].train_model(verbose=False)
 
+    def periodical_retrain(self, i, retrain_interval): 
+        # retrain for reuse
+        if i % retrain_interval != 0 and self.low_dim: # allow skipping retrain in low-dim setting
+            self._f_state_dict_record = self.f_model.feature_extractor.state_dict()
+            self._f_output_scale_record = self.f_model.model.covar_module.base_kernel.outputscale
+            self._f_length_scale_record = self.f_model.model.covar_module.base_kernel.base_kernel.lengthscale
+            self._c_state_dict_record_list = [self.c_model_list[c_idx].feature_extractor.state_dict() for c_idx in range(self.c_num)]
+            self._c_output_scale_record_list = [self.c_model_list[c_idx].model.covar_module.base_kernel.outputscale for c_idx in range(self.c_num)]
+            self._c_length_scale_record_list = [self.c_model_list[c_idx].model.covar_module.base_kernel.base_kernel.lengthscale for c_idx in range(self.c_num)]
+
+        self.f_model = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, lr= self.lr, low_dim=self.low_dim, pretrained_nn=self.pretrained_nn, retrain_nn=self.retrain_nn,
+                                spectrum_norm=self.spectrum_norm, exact_gp=self.exact, noise_constraint=self.noise_constraint)
+        self.c_model_list = [DKL(self.init_x, self.init_c_list[c_idx].squeeze(), n_iter=self.train_iter, lr= self.lr, low_dim=self.low_dim, pretrained_nn=self.pretrained_nn, retrain_nn=self.retrain_nn,
+                                spectrum_norm=self.spectrum_norm, exact_gp=self.exact, noise_constraint=self.noise_constraint) for c_idx in range(self.c_num)]
         
+        if self.record_loss:
+            self._f_pure_dkl = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, low_dim=self.low_dim, pretrained_nn=None, lr=self.lr, spectrum_norm=self.spectrum_norm, exact_gp=self.exact)
+        
+        if i % retrain_interval != 0 and self.low_dim:
+            self.f_model.feature_extractor.load_state_dict(self._f_state_dict_record, strict=False)
+            self.f_model.model.covar_module.base_kernel.outputscale = self._f_output_scale_record
+            self.f_model.model.covar_module.base_kernel.base_kernel.lengthscale = self._f_length_scale_record
+            for c_idx in range(self.c_num):
+                self.c_model_list[c_idx].feature_extractor.load_state_dict(self._c_state_dict_record_list[c_idx], strict=False)
+                self.c_model_list[c_idx].model.covar_module.base_kernel.outputscale = self._c_output_scale_record_list[c_idx]
+                self.c_model_list[c_idx].model.covar_module.base_kernel.base_kernel.lengthscale = self._c_length_scale_record_list[c_idx]
+        else:
+            self.train()
+        if self.record_loss:
+            self.f_loss_record["DK-AE"].append(self.f_model.mae_record[-1])
+            self.f_loss_record["DK"].append(self._f_pure_dkl.mae_record[-1])
+
+    def update_obs(self, candidate_idx):
+        self.init_x = torch.cat([self.init_x, self.x_tensor[candidate_idx].reshape(1,-1)], dim=0)
+        self.init_y = torch.cat([self.init_y, self.y_tensor[candidate_idx].reshape(1,-1)])
+        for c_idx in range(self.c_num):
+            self.init_c_list[c_idx] = torch.cat([self.init_c_list[c_idx], self.c_tensor_list[c_idx][candidate_idx].reshape(1,-1)])
+            assert self.init_x.size(0) == self.init_c_list[c_idx].size(0)
+        assert self.init_x.size(0) == self.init_y.size(0)
+        self.observed[candidate_idx] = 1
+
+    def update_regret(self, idx):
+        feasible_obs_filter = feasible_filter_gen(self.init_c_list, self.c_threshold_list)
+        if sum(feasible_obs_filter) > 0:
+            _max_reward = torch.max(self.init_y[feasible_obs_filter])
+            self.regret[idx] = self.maximum - _max_reward
+        else:
+            self.regret[idx] = self.max_regret
 
     def query_f_c(self, n_iter:int=10, acq="ci", retrain_interval:int=1, **kwargs):
         '''
@@ -457,54 +503,54 @@ class DK_BO_AE_C_M():
 
             # update obs
             _candidate_idx_list[i] = candidate_idx
-            self.init_x = torch.cat([self.init_x, self.x_tensor[candidate_idx].reshape(1,-1)], dim=0)
-            self.init_y = torch.cat([self.init_y, self.y_tensor[candidate_idx].reshape(1,-1)])
-            for c_idx in range(self.c_num):
-                self.init_c_list[c_idx] = torch.cat([self.init_c_list[c_idx], self.c_tensor_list[c_idx][candidate_idx].reshape(1,-1)])
-                assert self.init_x.size(0) == self.init_c_list[c_idx].size(0)
-            assert self.init_x.size(0) == self.init_y.size(0)
-            self.observed[candidate_idx] = 1
+            self.update_obs(candidate_idx)
 
-            # retrain
-            if i % retrain_interval != 0 and self.low_dim: # allow skipping retrain in low-dim setting
-                self._f_state_dict_record = self.f_model.feature_extractor.state_dict()
-                self._f_output_scale_record = self.f_model.model.covar_module.base_kernel.outputscale
-                self._f_length_scale_record = self.f_model.model.covar_module.base_kernel.base_kernel.lengthscale
-                self._c_state_dict_record_list = [self.c_model_list[c_idx].feature_extractor.state_dict() for c_idx in range(self.c_num)]
-                self._c_output_scale_record_list = [self.c_model_list[c_idx].model.covar_module.base_kernel.outputscale for c_idx in range(self.c_num)]
-                self._c_length_scale_record_list = [self.c_model_list[c_idx].model.covar_module.base_kernel.base_kernel.lengthscale for c_idx in range(self.c_num)]
-
-            self.f_model = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, lr= self.lr, low_dim=self.low_dim, pretrained_nn=self.pretrained_nn, retrain_nn=self.retrain_nn,
-                                 spectrum_norm=self.spectrum_norm, exact_gp=self.exact, noise_constraint=self.noise_constraint)
-            self.c_model_list = [DKL(self.init_x, self.init_c_list[c_idx].squeeze(), n_iter=self.train_iter, lr= self.lr, low_dim=self.low_dim, pretrained_nn=self.pretrained_nn, retrain_nn=self.retrain_nn,
-                                 spectrum_norm=self.spectrum_norm, exact_gp=self.exact, noise_constraint=self.noise_constraint) for c_idx in range(self.c_num)]
-            
-            if self.record_loss:
-                self._f_pure_dkl = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, low_dim=self.low_dim, pretrained_nn=None, lr=self.lr, spectrum_norm=self.spectrum_norm, exact_gp=self.exact)
-            
-            if i % retrain_interval != 0 and self.low_dim:
-                self.f_model.feature_extractor.load_state_dict(self._f_state_dict_record, strict=False)
-                self.f_model.model.covar_module.base_kernel.outputscale = self._f_output_scale_record
-                self.f_model.model.covar_module.base_kernel.base_kernel.lengthscale = self._f_length_scale_record
-                for c_idx in range(self.c_num):
-                    self.c_model_list[c_idx].feature_extractor.load_state_dict(self._c_state_dict_record_list[c_idx], strict=False)
-                    self.c_model_list[c_idx].model.covar_module.base_kernel.outputscale = self._c_output_scale_record_list[c_idx]
-                    self.c_model_list[c_idx].model.covar_module.base_kernel.base_kernel.lengthscale = self._c_length_scale_record_list[c_idx]
-            else:
-                self.train()
-            if self.record_loss:
-                self.f_loss_record["DK-AE"].append(self.f_model.mae_record[-1])
-                self.f_loss_record["DK"].append(self._f_pure_dkl.mae_record[-1])
+            # Retrain
+            self.periodical_retrain(i, retrain_interval)
 
             # regret & early stop
-            feasible_obs_filter = feasible_filter_gen(self.init_c_list, self.c_threshold_list)
-            if sum(feasible_obs_filter) > 0:
-                _max_reward = torch.max(self.init_y[feasible_obs_filter])
-                self.regret[i] = self.maximum - _max_reward
-            else:
-                self.regret[i] = self.max_regret
+            self.update_regret(idx=i)
 
             if self.regret[i] < 1e-10 and early_stop:
                 break
             if if_tqdm:
                 iterator.set_postfix({"regret":self.regret[i], "Internal_beta": beta})
+
+
+
+    def c_numerical_EI(self, n_iter:int=10, retrain_interval:int=1, **kwargs):
+        '''
+        First Stage: Query both f and c simultaneously
+        '''
+        assert self.init_x.size(0) == self.init_c_list[0].size(0)
+        assert self.init_x.size(0) == self.init_y.size(0)
+        self.regret = np.zeros(n_iter)
+        if_tqdm = kwargs.get("if_tqdm", False)
+        early_stop = kwargs.get("early_stop", True)
+        iterator = tqdm.tqdm(range(n_iter)) if if_tqdm else range(n_iter)
+
+        _candidate_idx_list = np.zeros(n_iter)
+        ### optimization loop
+        for i in iterator:
+            _ = self.f_model.next_point(self.x_tensor[self.roi_filter], 'qei', "love", return_idx=True)
+            _f_eqi = self.f_model.acq_val
+            #TBD allow calculate probability (mvn.log_prob(self, value: Tensor))
+            _c_prob = [self.c_model for c_idx in range(self.c_num)]
+                    
+            # locate max acq f_eqi * c_prob
+            candidate_idx = 0
+
+            # update obs
+            _candidate_idx_list[i] = candidate_idx
+            self.update_obs(candidate_idx)
+
+            # Retrain
+            self.periodical_retrain(i, retrain_interval)
+
+            # regret & early stop
+            self.update_regret(idx=i)
+
+            if self.regret[i] < 1e-10 and early_stop:
+                break
+            if if_tqdm:
+                iterator.set_postfix({"regret":self.regret[i]})
