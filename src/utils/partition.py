@@ -1,16 +1,9 @@
 """
 All necessary functions for the partition
 """
-import gpytorch
 import os
 import sys
-import random
 import torch
-import tqdm
-import time
-import matplotlib
-import math
-import warnings
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl

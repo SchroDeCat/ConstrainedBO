@@ -355,7 +355,7 @@ class DK_BO_AE_C_M():
         
         if c_model_list is None:
             self.c_model_list = [DKL(self.init_x, self.init_c_list[c_idx].squeeze(), n_iter=self.train_iter, lr= self.lr, low_dim=self.low_dim,
-                                    pectrum_norm=spectrum_norm, exact_gp=exact_gp, pretrained_nn=self.pretrained_nn, retrain_nn=retrain_nn,
+                                    spectrum_norm=spectrum_norm, exact_gp=exact_gp, pretrained_nn=self.pretrained_nn, retrain_nn=retrain_nn,
                                     noise_constraint=self.noise_constraint,) for c_idx in range(self.c_num)]
         else:
             self.c_model_list = c_model_list
@@ -516,14 +516,10 @@ class DK_BO_AE_C_M():
             if if_tqdm:
                 iterator.set_postfix({"regret":self.regret[i], "Internal_beta": beta})
 
-
-
-    def c_numerical_EI(self, n_iter:int=10, retrain_interval:int=1, **kwargs):
+    def query_f_passive_c(self, n_iter:int=10, acq='qei', retrain_interval:int=1, **kwargs):
         '''
         First Stage: Query both f and c simultaneously
         '''
-        assert self.init_x.size(0) == self.init_c_list[0].size(0)
-        assert self.init_x.size(0) == self.init_y.size(0)
         self.regret = np.zeros(n_iter)
         if_tqdm = kwargs.get("if_tqdm", False)
         early_stop = kwargs.get("early_stop", True)
@@ -532,13 +528,63 @@ class DK_BO_AE_C_M():
         _candidate_idx_list = np.zeros(n_iter)
         ### optimization loop
         for i in iterator:
-            _ = self.f_model.next_point(self.x_tensor[self.roi_filter], 'qei', "love", return_idx=True)
-            _f_eqi = self.f_model.acq_val
-            #TBD allow calculate probability (mvn.log_prob(self, value: Tensor))
-            _c_prob = [self.c_model for c_idx in range(self.c_num)]
-                    
-            # locate max acq f_eqi * c_prob
-            candidate_idx = 0
+            # first generate acq_f
+            _acq = acq.lower()
+            if _acq in ['qei', 'ts', 'cmes-ibo']: # qei should be different because f_max is not purely on f
+                with torch.no_grad(), gpytorch.settings.fast_pred_var(), gpytorch.settings.max_root_decomposition_size(200):
+                    # NEW FLAG FOR SAMPLING
+                    with gpytorch.settings.fast_pred_samples():
+                        # start_time = time.time()
+                        if _acq in ['ts']:
+                            _num_sample = 1
+                        elif _acq in ['qei']:
+                            _num_sample = 100
+                        else:
+                            _num_sample = kwargs.get('num_sample', 1)
+                        self.f_model.model.eval()
+                        _samples = self.f_model.model(self.x_tensor).rsample(torch.Size([_num_sample]))
+                    feasible_obs_filter = feasible_filter_gen(self.init_c_list, self.c_threshold_list)
+                    if sum(feasible_obs_filter) > 0:
+                        _best_y = torch.max(self.init_y[feasible_obs_filter])
+                    else:
+                        _best_y = self.y_tensor.min()
+
+                    if _acq in ['ts']:
+                        _acq_f = _samples.reshape([-1, self.data_size])
+                    elif _acq in ['qei']:
+                        _acq_f = (_samples.T - _best_y).clamp(min=0).mean(dim=-1)
+                    elif _acq in ['cmes-ibo']:
+                        _max_f_samples = _samples.max(dim=-1).values.squeeze()
+                        _subsample_num = kwargs.get("subsample_num", 1000)
+                        subsample_filter = np.random.choice(self.data_size, _subsample_num, replace=False)
+                        # subsample_filter = np.arange(self.data_size)
+                        _acq_f = torch.cat([self.f_model.marginal_survival(self.x_tensor[subsample_filter], threshold).unsqueeze(0) for threshold in _max_f_samples], dim=0)
+                        assert _acq_f.size(0) == _num_sample
+                        assert _acq_f.size(1) == subsample_filter.shape[0]
+
+            else:
+                _  = self.f_model.next_point(self.x_tensor, acq, "love", return_idx=True)
+                _acq_f = self.f_model.acq_val
+            
+            # then generate _c_prob
+            if (_acq in ['cmes-ibo']):
+                _c_prob = torch.cat([self.c_model_list[c_idx].marginal_survival(self.x_tensor[subsample_filter], self.c_threshold_list[c_idx]).unsqueeze(0) for c_idx in range(self.c_num)], dim=0)
+            else:
+                _c_prob = torch.cat([self.c_model_list[c_idx].marginal_survival(self.x_tensor, self.c_threshold_list[c_idx]).unsqueeze(0) for c_idx in range(self.c_num)], dim=0)
+            
+            _acq_value = torch.mul(torch.prod(_c_prob, dim=0), _acq_f)
+            if (_acq in ['cmes-ibo']):
+                _acq_value = 1 - _acq_value
+                _acq_value = torch.where(_acq_value > 1e-2, _acq_value, 1e-2) # guarantee no numerical problem
+                _acq_value = - torch.log(_acq_value)
+                _acq_value = _acq_value.mean(dim=0)
+            else:
+                assert _acq_value.size(-1) == self.data_size
+            
+            candidate_idx = torch.argmax(_acq_value)
+
+            if acq in ['cmes-ibo']:
+                candidate_idx = subsample_filter[candidate_idx]
 
             # update obs
             _candidate_idx_list[i] = candidate_idx

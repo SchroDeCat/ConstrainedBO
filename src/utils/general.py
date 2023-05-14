@@ -2,36 +2,12 @@
 Utilities to support exps
 """
 
-import gpytorch
 import os
 import sys
-import random
 import torch
-import tqdm
-import time
-import matplotlib
-import math
-import warnings
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-import datetime
-import itertools
-
-from sparsemax import Sparsemax
-from scipy.stats import ttest_ind
-from sklearn.cluster import MiniBatchKMeans, KMeans
-from sklearn.metrics.pairwise import pairwise_distances_argmin
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
-from sklearn.kernel_ridge import KernelRidge
-from sklearn.metrics import mean_absolute_error
-from sklearn.preprocessing import StandardScaler, RobustScaler
-from sklearn.cluster import KMeans
-from sklearn.decomposition import PCA
-from sklearn.manifold import TSNE
-from sklearn.neighbors import NearestNeighbors
-
 
 from torch.quasirandom import SobolEngine
 from botorch.utils.transforms import unnormalize
@@ -78,12 +54,6 @@ def feasible_filter_gen(c_tensor_list, threshold_list):
         _tmp_filter = c_tensor_list[c_idx] >= threshold_list[c_idx]
         feasible_filter = feasible_filter.logical_and(_tmp_filter.squeeze())
     return feasible_filter
-
-# def beta_CI(lcb, ucb, beta):
-#     """Lower then upper"""
-#     _ucb_scaled = (ucb - lcb) / 4 * (beta-2) + ucb
-#     _lcb_scaled = (ucb - lcb) / 4 * (2-beta) + lcb
-#     return _lcb_scaled, _ucb_scaled
 
 def _path(save_path, name, init_strategy, n_repeat, num_GP, n_iter, cluster_interval, acq, lr, train_iter, ucb_strategy, ci_intersection=False):
     return f"{save_path}/OL-{name}-{init_strategy}-{acq}-R{n_repeat}-P{num_GP}-T{n_iter}_I{cluster_interval}_L{int(-np.log10(lr))}-TI{train_iter}-US{ucb_strategy}{'-sec' if ci_intersection else ''}"

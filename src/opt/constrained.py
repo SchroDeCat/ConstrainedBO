@@ -3,39 +3,19 @@ Full pipeline for constrained BO
 '''
 
 import gpytorch
-import os
 import random
 import torch
 import tqdm
-import time
-import matplotlib
-import math
 import warnings
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-import datetime
-import itertools
 
 from ..models import DKL, AE, beta_CI
-from ..utils import save_res, load_res, clustering_methods, model_list_CI, intersecting_ROI_globe, feasible_filter_gen
-from .dkbo_olp import DK_BO_OLP
+from ..utils import save_res, model_list_CI, intersecting_ROI_globe, feasible_filter_gen
 from .dkbo_ae_constrained import DK_BO_AE_C, DK_BO_AE_C_M
 from math import ceil, floor
-from sparsemax import Sparsemax
-from scipy.stats import ttest_ind
 from scipy.stats import norm
-from sklearn.cluster import MiniBatchKMeans, KMeans
-from sklearn.metrics.pairwise import pairwise_distances_argmin
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
-from sklearn.kernel_ridge import KernelRidge
-from sklearn.metrics import mean_absolute_error
-from sklearn.preprocessing import StandardScaler, RobustScaler
-from sklearn.cluster import KMeans
-from sklearn.decomposition import PCA
-from sklearn.manifold import TSNE
-from sklearn.neighbors import NearestNeighbors
  
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -336,6 +316,7 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
             plot_result=False, save_result=False, save_path=None, fix_seed=False,  pretrained=False, ae_loc=None, _minimum_pick = 10, 
             _delta = 0.2, filter_beta=.05, exact_gp=False, constrain_noise=False, local_model=True):
     '''
+    Proposed ROI based method, default acq = ci
     Support Multiple Constraints
     '''
     ####### configurations
@@ -419,10 +400,6 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
                     _c_model_list[c_idx].train_model(verbose=False)
             f_lcb, f_ucb = _f_model.CI(x_tensor.to(DEVICE))
             c_lcb_list, c_ucb_list = model_list_CI(_c_model_list, x_tensor, DEVICE)
-            # c_lcb_list, c_ucb_list = [], []
-            # for _c_model in _c_model_list:
-            #     c_lcb_list_tmp, c_ucb_list_tmp = _c_model.CI(x_tensor.to(DEVICE))
-            #     c_lcb_list.append(c_lcb_list_tmp), c_ucb_list.append(c_ucb_list_tmp)
 
 
             ####### each test instance
@@ -502,7 +479,7 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
                 else:
                     _f_model_passed_in, _c_model_list_passed_in = _f_model, _c_model_list
                 _cbo_m = DK_BO_AE_C_M(x_tensor, y_tensor, c_tensor_list, roi_filter, c_uci_filter_list, lr=lr, spectrum_norm=spectrum_norm, low_dim=low_dim,
-                                    n_init=n_init,  train_iter=train_times, regularize=regularize, dynamic_weight=False,  retrain_nn=True, c_threshold_list=c_threshold_list,
+                                    n_init=n_init,  train_iter=train_times, regularize=regularize, dynamic_weight=False,  retrain_nn=retrain_nn, c_threshold_list=c_threshold_list,
                                     max=max_val, pretrained_nn=ae, verbose=verbose, init_x=init_x, init_y=init_y, init_c_list=init_c_list, exact_gp=exact_gp, noise_constraint=roi_noise_constraint,
                                     f_model=_f_model_passed_in, c_model_list=_c_model_list_passed_in)
 
@@ -521,12 +498,6 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
                 for c_idx, (c_max_test_x_lcb, c_min_test_x_ucb, _roi_c_lcb, _roi_c_ucb) in enumerate(zip(c_max_test_x_lcb_list, c_min_test_x_ucb_list, _roi_c_lcb_list, _roi_c_lcb_list)):
                     c_max_test_x_lcb_list[c_idx], c_min_test_x_ucb_list[c_idx], _, _ = intersecting_ROI_globe(c_max_test_x_lcb, c_min_test_x_ucb, _roi_c_lcb, _roi_c_ucb, _roi_beta, roi_filter)
 
-                # _roi_f_lcb_scaled, _roi_f_ucb_scaled = beta_CI(_roi_f_lcb, _roi_f_ucb, _roi_beta)
-                # f_max_test_x_lcb[roi_filter], f_min_test_x_ucb[roi_filter] = beta_CI(f_lcb[roi_filter], f_ucb[roi_filter], _roi_beta)
-                # _lcb_scaling_factor, _ucb_scaling_factor = f_max_test_x_lcb[roi_filter].max()/ _roi_f_lcb_scaled[roi_filter].max(), f_min_test_x_ucb[roi_filter].max() / _roi_f_ucb_scaled[roi_filter].max()
-                # _max_test_x_lcb, _min_test_x_ucb = torch.max(f_max_test_x_lcb, _roi_f_lcb_scaled * _lcb_scaling_factor), torch.min(f_min_test_x_ucb, _roi_f_ucb_scaled * _ucb_scaling_factor) 
-                # f_max_test_x_lcb[roi_filter], f_min_test_x_ucb[roi_filter] = _max_test_x_lcb[roi_filter], _min_test_x_ucb[roi_filter]
-                
                 # optimize f and learn c
                 interval_query_ceil = f_c_total_iter - iter
                 query_num = min(filter_interval, interval_query_ceil) 
@@ -642,3 +613,126 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
         return reg_record
     else:
         return _f_model, _c_model_list, _cbo_m
+
+def baseline_cbo_m(x_tensor, y_tensor, c_tensor_list, 
+                    constraint_threshold_list, constraint_confidence_list, 
+                    n_init=10, n_repeat=2, train_times=10, retrain_interval=1, n_iter=40, 
+                    regularize=False, low_dim=True, 
+                    spectrum_norm=False, acq="qei", verbose=True, lr=1e-2, 
+                    name="test", return_result=True, retrain_nn=True,
+                    plot_result=False, save_result=False, save_path=None, fix_seed=False,  
+                    pretrained=False, ae_loc=None,
+                    exact_gp=False, constrain_noise=False):
+    '''
+    CEI by Bayesian Optimization with Unknown Constraints
+    Michael A. Gelbart, Jasper Snoek, Ryan P. Adams
+    (https://arxiv.org/abs/1403.5607), default acq = ci
+    Support Multiple Constraints
+    '''
+    ####### configurations
+    if constrain_noise:
+        global_noise_constraint = gpytorch.constraints.Interval(1e-8, 1e-3)
+        name = f"{name}-noise_c"
+    else:
+        global_noise_constraint = None
+    
+    filter_interval=1
+
+    c_threshold_list = [norm.ppf(constraint_confidence, loc=constraint_threshold, scale=1) 
+                        for constraint_confidence, constraint_threshold in zip(constraint_confidence_list, constraint_threshold_list)]
+    c_num = len(c_tensor_list)
+    feasibility_filter = c_tensor_list[0] > c_threshold_list[0]
+    for c_idx in range(c_num):
+        feasibility_filter.logical_and(c_tensor_list[c_idx] > c_threshold_list[c_idx])
+    
+    assert sum(feasibility_filter) > 0
+    name = name if low_dim else name+'-hd'
+
+    feasible_filter = feasible_filter_gen(c_tensor_list, c_threshold_list)
+    max_val = y_tensor[feasible_filter].max()
+    reg_record = np.zeros([n_repeat, n_iter])
+
+    ####### init dkl and generate f_ucb for partition
+    data_size = x_tensor.size(0)
+    assert y_tensor.squeeze().size(0) == data_size
+    for c_idx in range(1, c_num):
+        assert c_tensor_list[c_idx] .squeeze().size(0) == data_size
+        if len(y_tensor.size()) > 2 or len(c_tensor_list[c_idx].size()) > 2 or len(x_tensor.size()) > 2:
+            raise ValueError(f"Shape of input tensor is ")    
+
+    if regularize:
+        name += "-reg"
+
+    if pretrained:
+        assert not (ae_loc is None)
+        ae = AE(x_tensor, lr=1e-3)
+        ae.load_state_dict(torch.load(ae_loc, map_location=DEVICE))
+    else:
+        ae = None
+
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        for rep in tqdm.tqdm(range(n_repeat), desc=f"Experiment Rep"):
+            # set seed
+            if fix_seed:
+                _seed = rep * 20 + n_init
+                torch.manual_seed(_seed)
+                np.random.seed(_seed)
+                random.seed(_seed)
+                torch.cuda.manual_seed(_seed)
+                torch.backends.cudnn.benchmark = False
+                torch.backends.cudnn.deterministic = True
+                
+            ####### init in each round
+            observed = np.zeros(data_size)
+            observed[:n_init] = 1
+            init_x = x_tensor[:n_init]
+            init_y = y_tensor[:n_init]
+            init_c_list = [c_tensor_list[c_idx][:n_init] for c_idx in range(c_num)]
+    
+            _cbo_m = DK_BO_AE_C_M(x_tensor, y_tensor, c_tensor_list, None, None, 
+                                    lr=lr, spectrum_norm=spectrum_norm, 
+                                    low_dim=low_dim,
+                                    n_init=n_init,  
+                                    train_iter=train_times, 
+                                    regularize=regularize, dynamic_weight=False,  
+                                    retrain_nn=retrain_nn, 
+                                    c_threshold_list=c_threshold_list,
+                                    max=max_val, pretrained_nn=ae, verbose=verbose, 
+                                    init_x=init_x, init_y=init_y, 
+                                    init_c_list=init_c_list, exact_gp=exact_gp, 
+                                    noise_constraint=global_noise_constraint,
+                                )
+            # optimize f and passively learn c
+            _cbo_m.query_f_passive_c(n_iter=n_iter, acq=acq, retrain_interval=1, if_tqdm=True)
+
+            # update records
+            reg_record[rep, :] = np.minimum.accumulate(_cbo_m.regret)
+
+    reg_output_record = reg_record.mean(axis=0)
+    
+
+    ### Export results
+    _file_prefix = f"Figure_{name}{'-Exact' if exact_gp else ''}-RI{retrain_interval}"
+    _file_postfix = f"-{acq}-R{n_repeat}-P{1}-T{n_iter}_I{filter_interval}_L{int(-np.log10(lr))}-TI{train_times}"
+    if plot_result:
+        # regret
+        fig = plt.figure()
+        plt.plot(reg_output_record)
+        plt.ylabel("regret")
+        plt.xlabel("Iteration")
+        plt.title(f'simple regret for {name}')
+        _path = f"{save_path}/Regret-{_file_prefix}{_file_postfix}"
+        plt.savefig(f"{_path}.png")
+
+
+    if save_result:
+        assert not (save_path is None)
+        save_res(save_path=save_path, name=f"Regret-{_file_prefix}-", res=reg_record, n_repeat=n_repeat, num_GP=2, n_iter=n_iter, train_iter=train_times,
+                init_strategy='none', cluster_interval=filter_interval, acq=acq, lr=lr, ucb_strategy="exact", ci_intersection=False, verbose=verbose,)
+
+    if return_result:
+        return reg_record
+    else:
+        return _cbo_m

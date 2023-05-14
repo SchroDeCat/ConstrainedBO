@@ -22,6 +22,7 @@ from .module import LargeFeatureExtractor, GPRegressionModel
 from .sgld import SGLD
 from sparsemax import Sparsemax
 from scipy.stats import ttest_ind
+from scipy.stats import norm
 from sklearn.cluster import MiniBatchKMeans, KMeans
 from sklearn.metrics.pairwise import pairwise_distances_argmin
 from sklearn.model_selection import train_test_split
@@ -387,7 +388,7 @@ class DKL():
                 # _best_y = self.train_y.max().squeeze()
                 _best_y = samples.T.mean(dim=-1).max()
                 self.acq_val = (samples.T - _best_y).clamp(min=0).mean(dim=-1)
-                assert max(self.acq_val) > 0
+                assert max(self.acq_val) > 1e-10
 
 
         elif acq.lower() in ["ucb", 'ci', 'lcb', 'rci']:
@@ -467,6 +468,17 @@ class DKL():
             lower, upper = observed_pred.confidence_region()
         
         return lower, upper
+
+    def marginal_survival(self, test_x, threshold:int=0):
+        '''
+        Marginal probability on test x that f(x) > threshold
+        Return: p_tensor.size == test_x.size
+        '''
+        self.model.eval()
+        mvn = self.model(test_x)
+        mean, stddev = mvn.mean, mvn.stddev
+        prob = torch.tensor([1-norm.cdf(x=threshold, loc=loc.detach().item(), scale=scale.detach().item()) for loc, scale in zip(mean, stddev)])
+        return prob
 
     def intersect_CI_next_point(self, test_x, max_test_x_lcb, min_test_x_ucb, acq="ci", beta=2, return_idx=False):
         """
