@@ -540,7 +540,7 @@ class DK_BO_AE_C_M():
                         elif _acq in ['qei']:
                             _num_sample = 100
                         else:
-                            _num_sample = kwargs.get('num_sample', 1)
+                            _num_sample = kwargs.get('num_sample', 5)
                         self.f_model.model.eval()
                         _samples = self.f_model.model(self.x_tensor).rsample(torch.Size([_num_sample]))
                     feasible_obs_filter = feasible_filter_gen(self.init_c_list, self.c_threshold_list)
@@ -554,11 +554,15 @@ class DK_BO_AE_C_M():
                     elif _acq in ['qei']:
                         _acq_f = (_samples.T - _best_y).clamp(min=0).mean(dim=-1)
                     elif _acq in ['cmes-ibo']:
-                        _max_f_samples = _samples.max(dim=-1).values.squeeze()
-                        _subsample_num = kwargs.get("subsample_num", 1000)
+                        _feasible_filter = feasible_filter_gen(self.c_tensor_list, self.c_threshold_list)
+                        _max_f_samples = _samples[:,_feasible_filter].max(dim=-1).values.squeeze()
+                        # _subsample_num = kwargs.get("subsample_num", 1000)
+                        _subsample_num = kwargs.get("subsample_num", self.data_size)
                         subsample_filter = np.random.choice(self.data_size, _subsample_num, replace=False)
                         # subsample_filter = np.arange(self.data_size)
-                        _acq_f = torch.cat([self.f_model.marginal_survival(self.x_tensor[subsample_filter], threshold).unsqueeze(0) for threshold in _max_f_samples], dim=0)
+                        self.f_model.model.eval()
+                        _mvn = self.f_model.model(self.x_tensor[subsample_filter])
+                        _acq_f = torch.cat([self.f_model.mvn_survival(_mvn, threshold).reshape([1, _subsample_num]) for threshold in _max_f_samples], dim=0)
                         assert _acq_f.size(0) == _num_sample
                         assert _acq_f.size(1) == subsample_filter.shape[0]
 

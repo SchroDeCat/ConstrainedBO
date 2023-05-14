@@ -480,6 +480,16 @@ class DKL():
         prob = torch.tensor([1-norm.cdf(x=threshold, loc=loc.detach().item(), scale=scale.detach().item()) for loc, scale in zip(mean, stddev)])
         return prob
 
+    @classmethod
+    def mvn_survival(self, mvn, threshold:int=0):
+        '''
+        Marginal probability on test x that f(x) > threshold
+        Return: p_tensor.size == test_x.size
+        '''
+        mean, stddev = mvn.mean, mvn.stddev
+        prob = torch.tensor([1-norm.cdf(x=threshold, loc=loc.detach().item(), scale=scale.detach().item()) for loc, scale in zip(mean, stddev)])
+        return prob
+
     def intersect_CI_next_point(self, test_x, max_test_x_lcb, min_test_x_ucb, acq="ci", beta=2, return_idx=False):
         """
         Maximize acquisition function to find next point to query in the intersection of historical CI
