@@ -35,7 +35,7 @@ from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from sklearn.neighbors import NearestNeighbors
  
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = torch.device('cpu')
 # STUDY_PARTITION = True
 STUDY_PARTITION = False
 

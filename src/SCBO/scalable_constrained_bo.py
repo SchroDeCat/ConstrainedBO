@@ -39,7 +39,7 @@ from botorch.utils.transforms import unnormalize
 
 warnings.filterwarnings("ignore")
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device('cpu')
 dtype = torch.double
 
 SMOKE_TEST = os.environ.get("SMOKE_TEST")

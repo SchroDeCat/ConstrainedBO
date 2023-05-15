@@ -40,7 +40,7 @@ from botorch.models.utils import gpt_posterior_settings
 
 
 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = torch.device('cpu')
 
 
 def beta_CI(lcb, ucb, beta):
@@ -63,7 +63,8 @@ class DKL():
         self._x = train_x
         self.data_dim = train_x.size(-1)
         self.low_dim = low_dim
-        self.cuda = torch.cuda.is_available()
+        # self.cuda = torch.cuda.is_available()
+        self.cuda = False
         self.test_split = test_split
         self.output_scale = output_scale
         self.retrain_nn = retrain_nn

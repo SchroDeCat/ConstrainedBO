@@ -13,7 +13,7 @@ from src.utils import sample_pts, feasible_filter_gen
 
 warnings.filterwarnings("ignore")
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device('cpu')
 dtype = torch.float
 
 dim=20

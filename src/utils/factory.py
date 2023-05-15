@@ -9,6 +9,9 @@ from matplotlib import pyplot as plt
 from .general import sample_pts, feasible_filter_gen
 from botorch.utils.transforms import unnormalize
 
+device = torch.device('cpu')
+dtype = torch.float
+
 class Data_Factory:
     """
     Collections of different objective functions
@@ -134,7 +137,7 @@ class Constrained_Data_Factory(Data_Factory):
     def __init__(self, num_pts:int = 20000) -> None:
         super().__init__()
         self.dtype = torch.float
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device('cpu')
         self._num_pts = num_pts
     
     def _generate_x_tensor(self, dim:int, num:int, seed:int=0) -> tensor:
@@ -155,12 +158,14 @@ class Constrained_Data_Factory(Data_Factory):
         dim = 1
         self.dim = dim
         self.lb, self.ub = torch.ones(dim) * -5, torch.ones(dim) * 5
+        self.lb, self.ub =self.lb.to(device=device, dtype=dtype), self.ub.to(device=device, dtype=dtype)
+        
         self.objective = lambda x: -Rastrigin(dim=1)(x)
         # self.c_func1 = lambda x: -(x+3)**2 + 0.64  # |x - -2| < 0.5
         self.c_func1 = lambda x: -torch.abs(x+3.1)**(1/2) + .8 **(1/2) 
         self.c_func1_scbo = lambda x: -self.c_func1(x)
         self.c_func_list = [self.c_func1_scbo]
-        self.x_tensor = self._generate_x_tensor(dim=1, num=self._num_pts)
+        self.x_tensor = self._generate_x_tensor(dim=1, num=self._num_pts).to(device=device, dtype=dtype)
         self.x_tensor_range = unnormalize(self.x_tensor, (self.lb, self.ub))
         self.y_tensor = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.objective, self.x_tensor).unsqueeze(-1)
         self.c_tensor1 = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.c_func1, self.x_tensor).unsqueeze(-1)
@@ -186,13 +191,14 @@ class Constrained_Data_Factory(Data_Factory):
         dim = 4
         self.dim = dim
         self.lb, self.ub = torch.ones(dim) * -5, torch.ones(dim) * 3
+        self.lb, self.ub =self.lb.to(device=device, dtype=dtype), self.ub.to(device=device, dtype=dtype)
         self.objective = lambda x: Ackley(dim=10)(x)
         self.c_func1 = lambda x: -torch.sum(x) # sum x <= 0
         self.c_func1_scbo = lambda x: -self.c_func1(x)
         self.c_func2 = lambda x: - torch.linalg.vector_norm(x-torch.ones(dim)) + 4 # norm x < 5
         self.c_func2_scbo = lambda x: -self.c_func2(x)
         self.c_func_list = [self.c_func1_scbo, self.c_func2_scbo]
-        self.x_tensor = self._generate_x_tensor(dim=1, num=self._num_pts, seed=2)
+        self.x_tensor = self._generate_x_tensor(dim=1, num=self._num_pts, seed=2).to(device=device, dtype=dtype)
         self.x_tensor_range = unnormalize(self.x_tensor, (self.lb, self.ub))
         self.y_tensor = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.objective, self.x_tensor).unsqueeze(-1)
         self.c_tensor1 = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.c_func1, self.x_tensor).unsqueeze(-1)
@@ -218,11 +224,11 @@ class Constrained_Data_Factory(Data_Factory):
         fontsize = 25
         plt.figure(figsize=[12, 10])
         plt.title(self._name, fontsize=fontsize)
-        plt.scatter(self.x_tensor_range.squeeze().numpy(), self.y_tensor.squeeze().numpy(), c='black', s=1, label='Objective')
-        feasible_x = self.x_tensor_range[self.feasible_filter]
-        bounds = [feasible_x.min(), feasible_x.max()]
+        plt.scatter(self.x_tensor_range.squeeze().to(device='cpu').numpy(), self.y_tensor.squeeze().to(device='cpu').numpy(), c='black', s=1, label='Objective')
+        feasible_x = self.x_tensor_range[self.feasible_filter].to(device='cpu')
+        bounds = [feasible_x.min().to(device='cpu'), feasible_x.max().to(device='cpu')]
         plt.vlines(x = bounds, ymin=self.y_tensor.min(), ymax=self.maximum, color='blue', label='Feasible region')
-        plt.scatter(self.x_tensor_range[self.max_arg].numpy(), self.y_tensor[self.max_arg].numpy(), c='red', s=100, marker='*', label='Optimum' )
+        plt.scatter(self.x_tensor_range[self.max_arg].to(device='cpu').numpy(), self.y_tensor[self.max_arg].to(device='cpu').numpy(), c='red', s=100, marker='*', label='Optimum' )
         plt.legend(fontsize=fontsize/1.4)
         plt.xlabel('X')
         plt.ylabel("Y")

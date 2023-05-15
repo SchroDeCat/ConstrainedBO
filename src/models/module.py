@@ -38,7 +38,7 @@ from botorch.models.model import Model
 
 
 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = torch.device('cpu')
 
 class LargeFeatureExtractor(torch.nn.Sequential):
     def __init__(self, data_dim, low_dim, add_spectrum_norm):

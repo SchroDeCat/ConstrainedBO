@@ -25,7 +25,7 @@ from matplotlib import pyplot as plt
 from tqdm import tqdm
 import numpy as np
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device('cpu')
 dtype = torch.double
 batch_size = 4
 max_cholesky_size = float("inf")  # Always use Cholesky

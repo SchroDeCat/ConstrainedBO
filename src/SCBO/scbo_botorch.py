@@ -46,7 +46,7 @@ from botorch.models.transforms.outcome import Standardize
 
 warnings.filterwarnings("ignore")
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device('cpu')
 dtype = torch.double
 
 @dataclass

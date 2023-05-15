@@ -122,7 +122,7 @@ class DKBO_OLP(MenuStrategy):
             self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("mps")
         else:
             self.device = 'cpu'
-        # self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # self.device = torch.device('cpu')
         self.partition_strategy = partition_strategy
         self.num_GP = num_GP
         self.acq = acq

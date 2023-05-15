@@ -28,7 +28,7 @@ from sklearn.decomposition import PCA
 from sklearn.manifold import TSNE
 from sklearn.neighbors import NearestNeighbors
 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = torch.device('cpu')
 
 class DK_BO_EM():
     def __init__(self, train_x, train_y, n_init:int=10, regularize=True, dynamic_weight=False, verbose=False, max_val:float=None, num_GP:int=2):

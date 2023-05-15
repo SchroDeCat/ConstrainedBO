@@ -31,7 +31,7 @@ def feasible_filter_gen(c_tensor_list, threshold_list):
 
 warnings.filterwarnings("ignore")
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device('cpu')
 dtype = torch.double
 
 SMOKE_TEST = os.environ.get("SMOKE_TEST")

@@ -30,7 +30,7 @@ from sklearn.neighbors import NearestNeighbors
 
 from ..utils import feasible_filter_gen
 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = torch.device('cpu')
 
 class DK_BO_AE_C():
     """
