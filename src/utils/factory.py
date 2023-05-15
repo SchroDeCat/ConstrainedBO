@@ -187,18 +187,22 @@ class Constrained_Data_Factory(Data_Factory):
             return self.x_tensor, self.objective, self.c_func_list
         
     def ackley_5d(self, scbo_format=False) -> List[tensor]:
+        '''
+        Note: due to earlier problem, it is actually 4d. but feeded to a 10 d function. and only on diagonal.
+        '''
         self._name = 'Ackely'
         dim = 4
         self.dim = dim
         self.lb, self.ub = torch.ones(dim) * -5, torch.ones(dim) * 3
         self.lb, self.ub =self.lb.to(device=device, dtype=dtype), self.ub.to(device=device, dtype=dtype)
-        self.objective = lambda x: Ackley(dim=10)(x)
+        self.objective = lambda x: Ackley(dim=10)(x) # deliberately set to be 10, still work on dim = 1
         self.c_func1 = lambda x: -torch.sum(x) # sum x <= 0
         self.c_func1_scbo = lambda x: -self.c_func1(x)
         self.c_func2 = lambda x: - torch.linalg.vector_norm(x-torch.ones(dim)) + 4 # norm x < 5
         self.c_func2_scbo = lambda x: -self.c_func2(x)
         self.c_func_list = [self.c_func1_scbo, self.c_func2_scbo]
         self.x_tensor = self._generate_x_tensor(dim=1, num=self._num_pts, seed=2).to(device=device, dtype=dtype)
+        self.x_tensor = unnormalize(self.x_tensor, (torch.zeros(dim).to(device=device, dtype=dtype), torch.ones(dim).to(device=device, dtype=dtype)))
         self.x_tensor_range = unnormalize(self.x_tensor, (self.lb, self.ub))
         self.y_tensor = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.objective, self.x_tensor).unsqueeze(-1)
         self.c_tensor1 = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.c_func1, self.x_tensor).unsqueeze(-1)
@@ -220,15 +224,19 @@ class Constrained_Data_Factory(Data_Factory):
         else:
             return self.x_tensor, self.objective, self.c_func_list
 
-    def visualize_1d(self,):
+    def visualize_1d(self, if_norm:bool=False):
         fontsize = 25
         plt.figure(figsize=[12, 10])
         plt.title(self._name, fontsize=fontsize)
-        plt.scatter(self.x_tensor_range.squeeze().to(device='cpu').numpy(), self.y_tensor.squeeze().to(device='cpu').numpy(), c='black', s=1, label='Objective')
-        feasible_x = self.x_tensor_range[self.feasible_filter].to(device='cpu')
+        if if_norm:
+            base_x = torch.linalg.vector_norm(self.x_tensor_range, dim=-1)
+        plt.scatter(base_x.squeeze().to(device='cpu').numpy(), self.y_tensor.squeeze().to(device='cpu').numpy(), c='black', s=1, label='Objective')
+        feasible_x = base_x[self.feasible_filter].to(device='cpu')
+        feasible_y = self.y_tensor[self.feasible_filter].to(device='cpu')
         bounds = [feasible_x.min().to(device='cpu'), feasible_x.max().to(device='cpu')]
-        plt.vlines(x = bounds, ymin=self.y_tensor.min(), ymax=self.maximum, color='blue', label='Feasible region')
-        plt.scatter(self.x_tensor_range[self.max_arg].to(device='cpu').numpy(), self.y_tensor[self.max_arg].to(device='cpu').numpy(), c='red', s=100, marker='*', label='Optimum' )
+        plt.scatter(feasible_x.squeeze().to(device='cpu').numpy(), feasible_y.squeeze().to(device='cpu').numpy(), c='purple', s=1, label='Feasible region')
+        # plt.vlines(x = bounds, ymin=self.y_tensor.min(), ymax=self.maximum, color='blue', label='Feasible region')
+        plt.scatter(base_x[self.max_arg].to(device='cpu').numpy(), self.y_tensor[self.max_arg].to(device='cpu').numpy(), c='red', s=100, marker='*', label='Optimum' )
         plt.legend(fontsize=fontsize/1.4)
         plt.xlabel('X')
         plt.ylabel("Y")

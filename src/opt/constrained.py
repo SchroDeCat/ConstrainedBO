@@ -11,6 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
+from ..SCBO import SCBO
 from ..models import DKL, AE, beta_CI
 from ..utils import save_res, model_list_CI, intersecting_ROI_globe, feasible_filter_gen
 from .dkbo_ae_constrained import DK_BO_AE_C, DK_BO_AE_C_M
@@ -761,3 +762,74 @@ def baseline_cbo_m(x_tensor, y_tensor, c_tensor_list,
         return reg_record
     else:
         return _cbo_m
+
+def baseline_scbo(x_tensor, y_func, c_func_list, 
+                    max_global, lb, ub, dim:int=1, 
+                    n_init=10, n_repeat=2, train_times=10, retrain_interval=1, n_iter=40, 
+                    low_dim=True, 
+                    verbose=True, lr=1e-2,
+                    name="test", return_result=True, retrain_nn=True,
+                    plot_result=False, save_result=False, save_path=None, fix_seed=False,  
+                    exact_gp=False, constrain_noise=False):
+    '''
+    https://botorch.org/tutorials/scalable_constrained_bo
+    '''
+    filter_interval=1
+    name = name if low_dim else name+'-hd'
+    acq = 'scbo'
+
+
+    reg_record = np.zeros([n_repeat, n_iter])
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        for rep in tqdm.tqdm(range(n_repeat), desc=f"Experiment Rep"):
+            # set seed
+            if fix_seed:
+                _seed = rep * 20 + n_init
+                torch.manual_seed(_seed)
+                np.random.seed(_seed)
+                random.seed(_seed)
+                torch.cuda.manual_seed(_seed)
+                torch.backends.cudnn.benchmark = False
+                torch.backends.cudnn.deterministic = True
+                
+            ####### init in each round
+    
+            batch_size = 1
+            scbo = SCBO(y_func, c_func_list, dim=dim, lower_bound=lb, upper_bound=ub, 
+                                train_times=train_times, lr=lr,
+                                batch_size = batch_size, n_init=n_init, constrain_noise=constrain_noise,
+                                train_X = x_tensor[:n_init].reshape([-1, dim]), dk= not exact_gp)
+
+            rewards = scbo.optimization(n_iter=n_iter//batch_size, x_tensor=x_tensor)
+            regrets = max_global - rewards
+
+            # update records
+            reg_record[rep, :] = np.minimum.accumulate(regrets[-n_iter:])
+
+    reg_output_record = reg_record.mean(axis=0)
+    
+
+    ### Export results
+    _file_prefix = f"Figure_{name}{'-Exact' if exact_gp else ''}-RI{retrain_interval}"
+    _file_postfix = f"-{acq}-R{n_repeat}-P{1}-T{n_iter}_I{filter_interval}_L{int(-np.log10(lr))}-TI{train_times}"
+    if plot_result:
+        # regret
+        fig = plt.figure()
+        plt.plot(reg_output_record)
+        plt.ylabel("regret")
+        plt.xlabel("Iteration")
+        plt.title(f'simple regret for {name}')
+        _path = f"{save_path}/Regret-{_file_prefix}{_file_postfix}"
+        plt.savefig(f"{_path}.png")
+
+
+    if save_result:
+        assert not (save_path is None)
+        save_res(save_path=save_path, name=f"Regret-{_file_prefix}-", res=reg_record, n_repeat=n_repeat, num_GP=2, n_iter=n_iter, train_iter=train_times,
+                init_strategy='none', cluster_interval=filter_interval, acq=acq, lr=lr, ucb_strategy="exact", ci_intersection=False, verbose=verbose,)
+
+    if return_result:
+        return reg_record
+    else:
+        return scbo
