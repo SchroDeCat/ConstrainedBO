@@ -56,9 +56,10 @@ c_num = len(c_fun_list)
 n_init = 10
 n_iter = 200
 train_times = 50
-n_repeat = 2
+n_repeat = 10
 # acq = "qei"
-acq = 'cmes-ibo'
+# acq = 'cmes-ibo'
+acq = 'random'
 max_cholesky_size = float("inf")  # Always use Cholesky
 
 print(f"acq {acq} n repeat {n_repeat}")

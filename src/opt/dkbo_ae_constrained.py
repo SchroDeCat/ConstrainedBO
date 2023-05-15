@@ -532,7 +532,6 @@ class DK_BO_AE_C_M():
             _acq = acq.lower()
             if _acq in ['qei', 'ts', 'cmes-ibo']: # qei should be different because f_max is not purely on f
                 with torch.no_grad(), gpytorch.settings.fast_pred_var(), gpytorch.settings.max_root_decomposition_size(200):
-                    # NEW FLAG FOR SAMPLING
                     with gpytorch.settings.fast_pred_samples():
                         # start_time = time.time()
                         if _acq in ['ts']:
@@ -554,25 +553,38 @@ class DK_BO_AE_C_M():
                     elif _acq in ['qei']:
                         _acq_f = (_samples.T - _best_y).clamp(min=0).mean(dim=-1)
                     elif _acq in ['cmes-ibo']:
-                        _feasible_filter = feasible_filter_gen(self.c_tensor_list, self.c_threshold_list)
-                        _max_f_samples = _samples[:,_feasible_filter].max(dim=-1).values.squeeze()
                         # _subsample_num = kwargs.get("subsample_num", 1000)
                         _subsample_num = kwargs.get("subsample_num", self.data_size)
                         subsample_filter = np.random.choice(self.data_size, _subsample_num, replace=False)
                         # subsample_filter = np.arange(self.data_size)
+                        # sample c
+                        _c_tensor_list = []
+                        with gpytorch.settings.fast_pred_samples():
+                            for _dk in self.c_model_list:
+                                _model = _dk.model
+                                _model.eval()
+                                _c_sample = _model(self.x_tensor[subsample_filter]).rsample(torch.Size([1])).reshape([-1,1])
+                                _c_tensor_list.append(_c_sample)
+                        _feasible_filter = feasible_filter_gen(_c_tensor_list, self.c_threshold_list)
+                        if _feasible_filter.sum() == 0:
+                            _feasible_filter = feasible_filter_gen(self._c_tensor_list, self.c_threshold_list)
+                        _max_f_samples = _samples[:,_feasible_filter].max(dim=-1).values.squeeze()
+                        # sample f
                         self.f_model.model.eval()
                         _mvn = self.f_model.model(self.x_tensor[subsample_filter])
                         _acq_f = torch.cat([self.f_model.mvn_survival(_mvn, threshold).reshape([1, _subsample_num]) for threshold in _max_f_samples], dim=0)
                         assert _acq_f.size(0) == _num_sample
                         assert _acq_f.size(1) == subsample_filter.shape[0]
 
+            elif _acq == 'random':
+                _acq_f = torch.rand(self.data_size).unsqueeze(0)
             else:
                 _  = self.f_model.next_point(self.x_tensor, acq, "love", return_idx=True)
-                _acq_f = self.f_model.acq_val
-            
+                _acq_f = self.f_model.acq_val.reshape([1, -1])
             # then generate _c_prob
             if (_acq in ['cmes-ibo']):
                 _c_prob = torch.cat([self.c_model_list[c_idx].marginal_survival(self.x_tensor[subsample_filter], self.c_threshold_list[c_idx]).unsqueeze(0) for c_idx in range(self.c_num)], dim=0)
+
             else:
                 _c_prob = torch.cat([self.c_model_list[c_idx].marginal_survival(self.x_tensor, self.c_threshold_list[c_idx]).unsqueeze(0) for c_idx in range(self.c_num)], dim=0)
             
