@@ -33,7 +33,7 @@ def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidenc
     else:
         global_noise_constraint = None
         roi_noise_constraint = None
-
+    _minimum_pick = min(_minimum_pick, n_init)
     c_threshold = norm.ppf(constraint_confidence, loc=constraint_threshold, scale=1)
     feasibility_filter = c_tensor > c_threshold
     assert sum(feasibility_filter) > 0
@@ -130,7 +130,6 @@ def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidenc
                 f_roi_filter = _f_filter_ucb >= f_roi_threshold
                 roi_filter = c_roi_filter.logical_and(f_roi_filter)
 
-                _minimum_pick = 10
                 if sum(roi_filter[observed==1]) <= _minimum_pick:
                     _, indices = torch.topk(c_ucb[observed==1], min(_minimum_pick, data_size))
                     for idx in indices:
@@ -178,8 +177,9 @@ def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidenc
 
   
                 # intersection of ROI CI and global CI
-                f_max_test_x_lcb, f_min_test_x_ucb, _roi_f_lcb_scaled,  _roi_f_ucb_scaled   = intersecting_ROI_globe(f_max_test_x_lcb, f_min_test_x_ucb, _roi_f_lcb, _roi_f_ucb, _roi_beta, roi_filter)
-                c_max_test_x_lcb, c_min_test_x_ucb, _,                  _                   = intersecting_ROI_globe(c_max_test_x_lcb, c_min_test_x_ucb, _roi_c_lcb, _roi_c_ucb, _roi_beta, roi_filter)
+                if ci_intersection:
+                    f_max_test_x_lcb, f_min_test_x_ucb, _roi_f_lcb_scaled,  _roi_f_ucb_scaled   = intersecting_ROI_globe(f_max_test_x_lcb, f_min_test_x_ucb, _roi_f_lcb, _roi_f_ucb, _roi_beta, roi_filter)
+                    c_max_test_x_lcb, c_min_test_x_ucb, _,                  _                   = intersecting_ROI_globe(c_max_test_x_lcb, c_min_test_x_ucb, _roi_c_lcb, _roi_c_ucb, _roi_beta, roi_filter)
                 # _roi_f_lcb_scaled, _roi_f_ucb_scaled = beta_CI(_roi_f_lcb, _roi_f_ucb, _roi_beta)
                 # f_max_test_x_lcb[roi_filter], f_min_test_x_ucb[roi_filter] = beta_CI(f_lcb[roi_filter], f_ucb[roi_filter], _roi_beta)
                 # _lcb_scaling_factor, _ucb_scaling_factor = f_max_test_x_lcb[roi_filter].max()/ _roi_f_lcb_scaled[roi_filter].max(), f_min_test_x_ucb[roi_filter].max() / _roi_f_ucb_scaled[roi_filter].max()
@@ -328,7 +328,7 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
     else:
         global_noise_constraint = None
         roi_noise_constraint = None
-
+    _minimum_pick = min(_minimum_pick, n_init)
     c_threshold_list = [norm.ppf(constraint_confidence, loc=constraint_threshold, scale=1) 
                         for constraint_confidence, constraint_threshold in zip(constraint_confidence_list, constraint_threshold_list)]
     c_num = len(c_tensor_list)
@@ -415,27 +415,43 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
                     _c_lcb_list[c_idx], _c_ucb_list[c_idx] = beta_CI(c_lcb_list[c_idx], c_ucb_list[c_idx], beta)
                 
                 # Take intersection of all historical CIs
-                if iter == 0:
+                # if iter == 0:
+                # if iter < 5:
+                if True:
                     f_max_test_x_lcb, f_min_test_x_ucb = _f_lcb.clone(), _f_ucb.clone()    
                     c_max_test_x_lcb_list, c_min_test_x_ucb_list = [_c_lcb.clone() for _c_lcb in _c_lcb_list], [_c_ucb.clone() for _c_ucb in _c_ucb_list]
                 else:
-                    f_max_test_x_lcb, f_min_test_x_ucb = torch.max(_f_lcb, f_max_test_x_lcb), torch.min(_f_ucb, f_min_test_x_ucb)
+                    _f_max_test_x_lcb, _f_min_test_x_ucb = torch.max(_f_lcb, f_max_test_x_lcb), torch.min(_f_ucb, f_min_test_x_ucb)
+                    _c_max_test_x_lcb_list, _c_min_test_x_ucb_list = [None for c_idx in range(c_num)], [None for c_idx in range(c_num)]
                     for c_idx in range(c_num):
-                        c_max_test_x_lcb_list[c_idx], c_min_test_x_ucb_list[c_idx] = torch.max(_c_lcb_list[c_idx], c_max_test_x_lcb_list[c_idx]), torch.min(_c_ucb_list[c_idx], c_min_test_x_ucb_list[c_idx])
-                        assert f_max_test_x_lcb.size(0) == data_size and f_min_test_x_ucb.size(0) == data_size
-                        assert c_max_test_x_lcb_list[c_idx].size(0) == data_size and c_min_test_x_ucb_list[c_idx].size(0) == data_size
-                        
+                        _c_max_test_x_lcb_list[c_idx], _c_min_test_x_ucb_list[c_idx] = torch.max(_c_lcb_list[c_idx], c_max_test_x_lcb_list[c_idx]), torch.min(_c_ucb_list[c_idx], c_min_test_x_ucb_list[c_idx])
+                        assert _f_max_test_x_lcb.size(0) == data_size and _f_min_test_x_ucb.size(0) == data_size
+                        assert _c_max_test_x_lcb_list[c_idx].size(0) == data_size and _c_min_test_x_ucb_list[c_idx].size(0) == data_size
+                    if torch.all(_f_max_test_x_lcb < _f_min_test_x_ucb):
+                        f_max_test_x_lcb, f_min_test_x_ucb = _f_max_test_x_lcb, _f_min_test_x_ucb
+                    for c_idx in range(c_num):
+                        if torch.all(_c_max_test_x_lcb_list[c_idx]< _c_min_test_x_ucb_list[c_idx]):
+                            c_max_test_x_lcb_list[c_idx], c_min_test_x_ucb_list[c_idx] = _c_max_test_x_lcb_list[c_idx], _c_min_test_x_ucb_list[c_idx]
+
                 # Identify f_roi, csi, cui, c_roi, and general ROI
                 if default_fbeta:
                     filter_beta = beta
-
-                _f_filter_lcb, _f_filter_ucb = beta_CI(f_lcb, f_ucb, filter_beta)
-                _c_filter_lcb_list, _c_filter_ucb_list = [None for _ in range(c_num)], [None for _ in range(c_num)]
+                observed_num = observed.sum()
+                # filter_on_intersect = default_fbeta and _minimum_pick < observed_num
+                filter_on_intersect = False
+                if filter_on_intersect:
+                    _f_filter_lcb, _f_filter_ucb = f_max_test_x_lcb, f_min_test_x_ucb
+                    _c_filter_lcb_list, _c_filter_ucb_list = c_max_test_x_lcb_list, c_min_test_x_ucb_list
+                else:
+                    _f_filter_lcb, _f_filter_ucb = beta_CI(f_lcb, f_ucb, filter_beta)
+                    _c_filter_lcb_list, _c_filter_ucb_list = [None for _ in range(c_num)], [None for _ in range(c_num)]
+                    for c_idx in range(c_num):
+                        _c_filter_lcb_list[c_idx], _c_filter_ucb_list[c_idx] = beta_CI(c_lcb_list[c_idx], c_ucb_list[c_idx], filter_beta)
+                    
+                
                 c_sci_filter_list, c_roi_filter_list, c_uci_filter_list = [None for _ in range(c_num)], [None for _ in range(c_num)], [None for _ in range(c_num)]
                 
                 for c_idx in range(c_num):
-                    _c_filter_lcb_list[c_idx], _c_filter_ucb_list[c_idx] = beta_CI(c_lcb_list[c_idx], c_ucb_list[c_idx], filter_beta)
-                    
                     c_sci_filter_list[c_idx] = _c_filter_lcb_list[c_idx] >= c_threshold_list[c_idx]
                     c_roi_filter_list[c_idx] = _c_filter_ucb_list[c_idx] >= c_threshold_list[c_idx]
                     c_uci_filter_list[c_idx] = c_roi_filter_list[c_idx].logical_xor(c_sci_filter_list[c_idx]) 
@@ -448,13 +464,10 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
                 f_roi_filter = _f_filter_ucb >= f_roi_threshold
 
 
-
                 roi_filter = f_roi_filter.clone()           # single general roi
                 for c_roi_filter in c_roi_filter_list:  # general ROI.
                     roi_filter = roi_filter.logical_and(c_roi_filter)
                 
-
-                _minimum_pick = 10                      # minimum pick in generl roi
                 if sum(roi_filter[observed==1]) <= _minimum_pick:
                     c_ucb_observed_min = torch.min(torch.cat([c_ucb[observed==1].reshape(1,-1) for c_ucb in c_ucb_list], dim=0), dim=0).values
                     _, indices = torch.topk(c_ucb_observed_min, min(_minimum_pick, c_ucb_observed_min.size(0)))
@@ -480,10 +493,10 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
                 _cbo_m = DK_BO_AE_C_M(x_tensor, y_tensor, c_tensor_list, roi_filter, c_uci_filter_list, lr=lr, spectrum_norm=spectrum_norm, low_dim=low_dim,
                                     n_init=n_init,  train_iter=train_times, regularize=regularize, dynamic_weight=False,  retrain_nn=retrain_nn, c_threshold_list=c_threshold_list,
                                     max=max_val, pretrained_nn=ae, verbose=verbose, init_x=init_x, init_y=init_y, init_c_list=init_c_list, exact_gp=exact_gp, noise_constraint=roi_noise_constraint,
-                                    f_model=_f_model_passed_in, c_model_list=_c_model_list_passed_in)
+                                    f_model=_f_model_passed_in, c_model_list=_c_model_list_passed_in, observed=observed)
 
                 _roi_f_lcb, _roi_f_ucb = _cbo_m.f_model.CI(x_tensor)
-                _roi_c_lcb_list, _roi_c_lcb_list  = model_list_CI(_cbo_m.c_model_list, x_tensor, DEVICE)
+                _roi_c_lcb_list, _roi_c_ucb_list  = model_list_CI(_cbo_m.c_model_list, x_tensor, DEVICE)
 
                 # if ci_intersection:
                 if not (default_beta): # only for visualization & intersection
@@ -493,9 +506,12 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
 
   
                 # intersection of ROI CI and global CI
-                f_max_test_x_lcb, f_min_test_x_ucb, _roi_f_lcb_scaled,  _roi_f_ucb_scaled  = intersecting_ROI_globe(f_max_test_x_lcb, f_min_test_x_ucb, _roi_f_lcb, _roi_f_ucb, _roi_beta, roi_filter)
-                for c_idx, (c_max_test_x_lcb, c_min_test_x_ucb, _roi_c_lcb, _roi_c_ucb) in enumerate(zip(c_max_test_x_lcb_list, c_min_test_x_ucb_list, _roi_c_lcb_list, _roi_c_lcb_list)):
-                    c_max_test_x_lcb_list[c_idx], c_min_test_x_ucb_list[c_idx], _, _ = intersecting_ROI_globe(c_max_test_x_lcb, c_min_test_x_ucb, _roi_c_lcb, _roi_c_ucb, _roi_beta, roi_filter)
+                if ci_intersection:
+                    f_max_test_x_lcb, f_min_test_x_ucb, _roi_f_lcb_scaled,  _roi_f_ucb_scaled  = intersecting_ROI_globe(f_max_test_x_lcb, f_min_test_x_ucb, _roi_f_lcb, _roi_f_ucb, _roi_beta, roi_filter)
+                    for c_idx, (c_max_test_x_lcb, c_min_test_x_ucb, _roi_c_lcb, _roi_c_ucb) in enumerate(zip(c_max_test_x_lcb_list, c_min_test_x_ucb_list, _roi_c_lcb_list, _roi_c_ucb_list)):
+                        c_max_test_x_lcb_list[c_idx], c_min_test_x_ucb_list[c_idx], _, _ = intersecting_ROI_globe(c_max_test_x_lcb, c_min_test_x_ucb, _roi_c_lcb, _roi_c_ucb, _roi_beta, roi_filter)
+                else:
+                    _, _, _roi_f_lcb_scaled,  _roi_f_ucb_scaled  = intersecting_ROI_globe(f_max_test_x_lcb, f_min_test_x_ucb, _roi_f_lcb, _roi_f_ucb, _roi_beta, roi_filter)
 
                 # optimize f and learn c
                 interval_query_ceil = f_c_total_iter - iter
@@ -534,11 +550,15 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
                 _iterator_info['Roi Accuracy'] = f"{(roi_filter.logical_and(feasible_filter).sum()/roi_filter.sum()).detach().item():.2%}"
                 _iterator_info['Csi Accuracy'] = f"{(c_sci_filter.logical_and(feasible_filter).sum()/c_sci_filter.sum()).detach().item():.2%}"
                 _iterator_info['Roi Y range'] = f"{roi_y_min:.2f}, {roi_y_max:.2f}"
+                _iterator_info['filter_on_intersect'] = filter_on_intersect
                 iterator.set_postfix(_iterator_info)
 
                 ucb_filtered_idx = util_array[roi_filter]
                 # observed[ucb_filtered_idx[_cbo.observed==1]] = 1
-                observed[util_array[_cbo_m.observed==1]] = 1
+                observed_num = observed.sum()
+                observed_diff = (observed - _cbo_m.observed).sum()
+                observed[_cbo_m.observed == 1] = 1
+                observed_num = observed.sum()
 
                 # update model and therefore the confidence intervals for filtering
                 _f_model = DKL(x_tensor[observed==1], y_tensor[observed==1].squeeze() if sum(observed) > 1 else y_tensor[observed==1],  

@@ -242,7 +242,7 @@ class ConstrainedMaxPosteriorSampling(MaxPosteriorSampling):
             `X[..., i, :]` is the `i`-th sample.
         """
         posterior = self.model.posterior(X, observation_noise=observation_noise)
-        samples = posterior.rsample(sample_shape=torch.Size([num_samples]))
+        samples = posterior.rsample(sample_shape=torch.Size([num_samples])).T
 
         # c_posterior = self.constraint_model.posterior(
         #     X, observation_noise=observation_noise

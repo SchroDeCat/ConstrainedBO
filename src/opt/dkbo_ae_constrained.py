@@ -73,7 +73,7 @@ class DK_BO_AE_C():
         self.spectrum_norm = spectrum_norm
         self.exact = exact_gp # exact GP overide
         self.noise_constraint = noise_constraint
-        self.observed = np.zeros(self.x_tensor.size(0)).astype("int")
+        self.observed = kwargs.get("observed", np.zeros(self.x_tensor.size(0)).astype("int"))
         self.pretrained_nn = pretrained_nn
         self.roi_filter = roi_filter
         self.c_uci_filter = c_uci_filter
@@ -336,7 +336,7 @@ class DK_BO_AE_C_M():
         self.spectrum_norm = spectrum_norm
         self.exact = exact_gp # exact GP overide
         self.noise_constraint = noise_constraint
-        self.observed = np.zeros(self.x_tensor.size(0)).astype("int")
+        self.observed = kwargs.get("observed", np.zeros(self.x_tensor.size(0)).astype("int"))
         self.pretrained_nn = pretrained_nn
         self.roi_filter = roi_filter
         self.c_uci_filter_list = c_uci_filter_list
@@ -428,6 +428,7 @@ class DK_BO_AE_C_M():
             assert self.init_x.size(0) == self.init_c_list[c_idx].size(0)
         assert self.init_x.size(0) == self.init_y.size(0)
         self.observed[candidate_idx] = 1
+        observed_num = self.observed.sum()
 
     def update_regret(self, idx):
         feasible_obs_filter = feasible_filter_gen(self.init_c_list, self.c_threshold_list)
@@ -462,8 +463,8 @@ class DK_BO_AE_C_M():
         ### optimization loop
         for i in iterator:
             _candidate_idx_c_list = [None for i in range(self.c_num)]
-            
-            _acq = 'lcb' if i // 2 and acq == 'ci' else 'ci'
+            _acq = 'ci'
+            # _acq = 'lcb' if i // 2 and acq == 'ci' else 'ci'
             if real_beta:
                 beta = (2 * np.log((self.x_tensor.size(0) * (np.pi * (self.init_x.size(0) + 1)) ** 2) /(6 * _delta))) ** 0.5
             # acq values
@@ -489,7 +490,8 @@ class DK_BO_AE_C_M():
                         _candidate_idx_c_list[c_idx] = _candidate_idx_c
             
             # locate max acq
-            if i // 2:
+            if False:
+            # if i // 2:
                 _acq_value = torch.prod(torch.cat([model.acq_value for model in self.c_model_list]), dim=0)
                 _acq_value = torch.mul(_acq_value. f_model.acq_value)
                 candidate_idx = _acq_value.argmax()
@@ -574,7 +576,7 @@ class DK_BO_AE_C_M():
                                 _c_tensor_list.append(_c_sample)
                         _feasible_filter = feasible_filter_gen(_c_tensor_list, self.c_threshold_list)
                         if _feasible_filter.sum() == 0:
-                            _feasible_filter = feasible_filter_gen(self._c_tensor_list, self.c_threshold_list)
+                            _feasible_filter = feasible_filter_gen(self.c_tensor_list, self.c_threshold_list)
                         _max_f_samples = _samples[:,_feasible_filter].max(dim=-1).values.squeeze()
                         # sample f
                         self.f_model.model.eval()

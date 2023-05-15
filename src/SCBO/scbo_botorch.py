@@ -21,6 +21,7 @@ from dataclasses import dataclass
 
 import sys
 sys.path.append(f"{os.path.dirname(__file__)}/..")
+sys.path.append(f"{os.path.dirname(__file__)}")
 from models import DKL
 
 import gpytorch
@@ -36,7 +37,7 @@ from botorch.fit import fit_gpytorch_mll
 # Constrained Max Posterior Sampling s a new sampling class, similar to MaxPosteriorSampling,
 # which implements the constrained version of Thompson Sampling described in [1].
 # from botorch.generation.sampling import ConstrainedMaxPosteriorSampling
-from sampling import ConstrainedMaxPosteriorSampling
+from SCBO.sampling import ConstrainedMaxPosteriorSampling
 from botorch.models import SingleTaskGP
 from botorch.models.model_list_gp_regression import ModelListGP
 from botorch.test_functions import Ackley

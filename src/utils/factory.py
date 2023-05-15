@@ -153,9 +153,11 @@ class Constrained_Data_Factory(Data_Factory):
         """https://www.sfu.ca/~ssurjano/rastr.html"""
         self._name = 'Rastrigin 1D'
         dim = 1
+        self.dim = dim
         self.lb, self.ub = torch.ones(dim) * -5, torch.ones(dim) * 5
         self.objective = lambda x: -Rastrigin(dim=1)(x)
-        self.c_func1 = lambda x: -(x+2)**2 + 0.25  # |x - -2| < 0.5
+        # self.c_func1 = lambda x: -(x+3)**2 + 0.64  # |x - -2| < 0.5
+        self.c_func1 = lambda x: -torch.abs(x+3.1)**(1/2) + .8 **(1/2) 
         self.c_func1_scbo = lambda x: -self.c_func1(x)
         self.c_func_list = [self.c_func1_scbo]
         self.x_tensor = self._generate_x_tensor(dim=1, num=self._num_pts)
@@ -175,6 +177,7 @@ class Constrained_Data_Factory(Data_Factory):
 
         if not scbo_format:
             return self.x_tensor_range, self.y_tensor, self.c_tensor_list
+            # return self.x_tensor, self.y_tensor, self.c_tensor_list
         else:
             return self.x_tensor, self.objective, self.c_func_list
         
@@ -183,10 +186,10 @@ class Constrained_Data_Factory(Data_Factory):
         fontsize = 25
         plt.figure(figsize=[12, 10])
         plt.title(self._name, fontsize=fontsize)
-        plt.scatter(self.x_tensor_range.squeeze().numpy(), self.y_tensor.squeeze().numpy(), c='black', s=1, label='Samples')
+        plt.scatter(self.x_tensor_range.squeeze().numpy(), self.y_tensor.squeeze().numpy(), c='black', s=1, label='Objective')
         feasible_x = self.x_tensor_range[self.feasible_filter]
         bounds = [feasible_x.min(), feasible_x.max()]
-        plt.vlines(x = bounds, ymin=self.y_tensor.min(), ymax=self.maximum, color='blue', label='feasible region')
+        plt.vlines(x = bounds, ymin=self.y_tensor.min(), ymax=self.maximum, color='blue', label='Feasible region')
         plt.scatter(self.x_tensor_range[self.max_arg].numpy(), self.y_tensor[self.max_arg].numpy(), c='red', s=100, marker='*', label='Optimum' )
         plt.legend(fontsize=fontsize/1.4)
         plt.xlabel('X')
