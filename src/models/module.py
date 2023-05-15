@@ -68,8 +68,8 @@ class GPRegressionModel(gpytorch.models.ExactGP):
             if low_dim:
                 self.covar_module = gpytorch.kernels.GridInterpolationKernel(
                     gpytorch.kernels.ScaleKernel(gpytorch.kernels.RBFKernel(ard_num_dims=1), 
-                    outputscale_constraint=gpytorch.constraints.Interval(0.7,1.0)),
-                    # outputscale_constraint=gpytorch.constraints.Interval(0.7,5.0)),
+                    # outputscale_constraint=gpytorch.constraints.Interval(0.7,1.0)),
+                    outputscale_constraint=gpytorch.constraints.Interval(0.7,5.0)),
                     num_dims=1, grid_size=100)
             else:
                 self.covar_module = gpytorch.kernels.LinearKernel(num_dims=10)

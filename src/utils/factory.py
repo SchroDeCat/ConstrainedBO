@@ -2,7 +2,7 @@ from typing import List, Callable
 import numpy as np
 import torch
 from torch import tensor
-from botorch.test_functions import Rastrigin, Rosenbrock
+from botorch.test_functions import Rastrigin, Rosenbrock, Ackley
 from matplotlib import pyplot as plt
 
 
@@ -137,11 +137,11 @@ class Constrained_Data_Factory(Data_Factory):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self._num_pts = num_pts
     
-    def _generate_x_tensor(self, dim:int, num:int) -> tensor:
+    def _generate_x_tensor(self, dim:int, num:int, seed:int=0) -> tensor:
         '''
         return samples in [0, 1]^dim
         '''
-        x_tensor = sample_pts(lb=torch.zeros(dim), ub=torch.ones(dim), n_pts=num,  dim=dim, seed=0)
+        x_tensor = sample_pts(lb=torch.zeros(dim), ub=torch.ones(dim), n_pts=num,  dim=dim, seed=seed)
         return x_tensor.to(device=self.device, dtype=self.dtype)
     
     @staticmethod
@@ -165,9 +165,9 @@ class Constrained_Data_Factory(Data_Factory):
         self.y_tensor = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.objective, self.x_tensor).unsqueeze(-1)
         self.c_tensor1 = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.c_func1, self.x_tensor).unsqueeze(-1)
         self.c_tensor_list = [self.c_tensor1]
-        self.feasible_filter = feasible_filter_gen(self.c_tensor_list, [0])
         self.constraint_threshold_list = [0]
         self.constraint_confidence_list = [0.5]
+        self.feasible_filter = feasible_filter_gen(self.c_tensor_list, self.constraint_threshold_list)
 
         assert torch.any(self.feasible_filter)
 
@@ -181,6 +181,38 @@ class Constrained_Data_Factory(Data_Factory):
         else:
             return self.x_tensor, self.objective, self.c_func_list
         
+    def ackley_5d(self, scbo_format=False) -> List[tensor]:
+        self._name = 'Ackely'
+        dim = 4
+        self.dim = dim
+        self.lb, self.ub = torch.ones(dim) * -5, torch.ones(dim) * 3
+        self.objective = lambda x: Ackley(dim=10)(x)
+        self.c_func1 = lambda x: -torch.sum(x) # sum x <= 0
+        self.c_func1_scbo = lambda x: -self.c_func1(x)
+        self.c_func2 = lambda x: - torch.linalg.vector_norm(x-torch.ones(dim)) + 4 # norm x < 5
+        self.c_func2_scbo = lambda x: -self.c_func2(x)
+        self.c_func_list = [self.c_func1_scbo, self.c_func2_scbo]
+        self.x_tensor = self._generate_x_tensor(dim=1, num=self._num_pts, seed=2)
+        self.x_tensor_range = unnormalize(self.x_tensor, (self.lb, self.ub))
+        self.y_tensor = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.objective, self.x_tensor).unsqueeze(-1)
+        self.c_tensor1 = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.c_func1, self.x_tensor).unsqueeze(-1)
+        self.c_tensor2 = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.c_func2, self.x_tensor).unsqueeze(-1)
+        self.c_tensor_list = [self.c_tensor1, self.c_tensor2]
+        self.constraint_threshold_list = [0, 0]
+        self.constraint_confidence_list = [0.5, 0.5]
+        self.feasible_filter = feasible_filter_gen(self.c_tensor_list, self.constraint_threshold_list)
+
+        assert torch.any(self.feasible_filter)
+
+        __feasible_y = torch.where(self.feasible_filter, self.y_tensor.squeeze(), float('-inf'))
+        self.maximum = __feasible_y.max()
+        self.max_arg = __feasible_y.argmax()
+
+        if not scbo_format:
+            return self.x_tensor_range, self.y_tensor, self.c_tensor_list
+            # return self.x_tensor, self.y_tensor, self.c_tensor_list
+        else:
+            return self.x_tensor, self.objective, self.c_func_list
 
     def visualize_1d(self,):
         fontsize = 25

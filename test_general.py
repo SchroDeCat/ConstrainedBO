@@ -10,17 +10,17 @@ import random
 import warnings
 import tqdm
 
-EXPS = ['rastrigin_1d', 'rastrigin_10d', 'ackley_20d', 'rosenbrock_5d', 'water_converter_32d', 'gpu_performance_16d']
+EXPS = ['rastrigin_1d', 'rastrigin_10d', 'ackley_5d', 'rosenbrock_5d', 'water_converter_32d', 'gpu_performance_16d']
 METHODs = ['cbo', 'scbo', 'cmes-ibo', 'ts', 'qei', 'random']
 
-def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_times:int=50, n_iter:int=20, n_init:int=10)->None:
+def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_times:int=50, n_iter:int=20, n_init:int=10, constrain_noise:bool=True)->None:
     exp = exp.lower()
     method = method.lower()
     assert exp in EXPS
     assert method in METHODs
     name = f"{exp.upper()}"
     lr = 1e-4
-
+    ### exp
     if exp == 'rastrigin_1d': # rastrigin 1D
         cbo_factory = Constrained_Data_Factory(num_pts=20000)
         scbo = 'scbo' in method
@@ -32,9 +32,20 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         feasible_filter = cbo_factory.feasible_filter
         y_tensor = cbo_factory.y_tensor
         cbo_factory.visualize_1d()
+    elif exp == "ackley_5d":
+        cbo_factory = Constrained_Data_Factory(num_pts=100000)
+        scbo = 'scbo' in method
+        if scbo:
+            x_tensor, y_func, c_func_list = cbo_factory.ackley_5d(scbo_format=scbo)
+        else:
+            x_tensor, y_tensor, c_tensor_list = cbo_factory.ackley_5d(scbo_format=scbo)
+        constraint_threshold_list, constraint_confidence_list = cbo_factory.constraint_threshold_list, cbo_factory.constraint_confidence_list
+        feasible_filter = cbo_factory.feasible_filter
+        y_tensor = cbo_factory.y_tensor
     else:
         raise NotImplemented(f"Exp {exp} no implemented")
 
+    ### method
     print(f"initial reward {y_tensor[:n_init][feasible_filter[:n_init]].squeeze()} while global max {y_tensor[feasible_filter].max().item()}")
     if method in ['cmes-ibo', 'ts', 'qei', 'random']:
 
@@ -47,7 +58,7 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
                                 return_result=True, retrain_nn=True,
                                 plot_result=True, save_result=True, save_path=f'./res/baseline/{method}', 
                                 fix_seed=True,  pretrained=False, ae_loc=None, 
-                                exact_gp=False, constrain_noise=True,)
+                                exact_gp=False, constrain_noise=constrain_noise,)
         
     elif method == 'cbo':
 
@@ -57,13 +68,13 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
                     spectrum_norm=False, retrain_interval=1, n_iter=n_iter, filter_interval=1, acq="ci", 
                     ci_intersection=True, verbose=True, lr=1e-4, name=name, return_result=True, retrain_nn=True,
                     plot_result=True, save_result=True, save_path='./res/cbo', fix_seed=True,  pretrained=False, ae_loc=None, 
-                    _minimum_pick = 10, _delta = 0.2, beta=1, filter_beta=1, exact_gp=False, constrain_noise=True, local_model=False)
+                    _minimum_pick = 10, _delta = 0.2, beta=1, filter_beta=1, exact_gp=False, constrain_noise=constrain_noise, local_model=False)
 
     elif method =='scbo':
         init_feasible_reward = y_tensor[:n_init][feasible_filter[:n_init]]
         max_reward = init_feasible_reward.max().item()
         max_global = y_tensor[feasible_filter].max().item()
-        reg_record = np.zeros([n_repeat, n_iter])
+        regret = np.zeros([n_repeat, n_iter])
         print(f"Feasible Y {init_feasible_reward}")
         print(f"Before Optimization the best value is: {max_reward:.4f} / global opt {max_global:.4f} := regret {max_global - max_reward:.4f} ")
 
@@ -80,13 +91,13 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
                 torch.backends.cudnn.deterministic = True
                 batch_size = 1
                 scbo = SCBO(y_func, c_func_list, dim=cbo_factory.dim, lower_bound=cbo_factory.lb, upper_bound=cbo_factory.ub, 
-                                         train_times=train_times, lr=lr,
+                                    train_times=train_times, lr=lr,
                                     batch_size = batch_size, n_init=n_init, 
-                                   train_X = x_tensor[:n_init].reshape([-1,cbo_factory.dim]), dk= True)
+                                    train_X = x_tensor[:n_init].reshape([-1,cbo_factory.dim]), dk= True)
 
                 rewards = scbo.optimization(n_iter=n_iter//batch_size, x_tensor=x_tensor)
                 regrets = max_global - rewards
-                reg_record[rep] = regrets[-n_iter:]
+                regret[rep] = regrets[-n_iter:]
     else:
         raise NotImplemented(f"Method {method} no implemented")
 
@@ -95,12 +106,22 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
 
 
 if __name__ == "__main__":
+    n_repeat = 2
+    n_init = 5
+    n_iter = 20
     # experiment(n_init=5, method='qei')
     # experiment(n_init=5, method='ts')
     # experiment(n_init=5, method='cmes-ibo')
-    experiment(n_init=5, method='scbo')
+    # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=40, method='scbo')
     # experiment(n_init=5, method='cbo', n_iter=200)
-    # experiment(n_init=5, method='cbo')
+    # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, method='cbo')
+    # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, method='qei')
+    # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, method='ts')
+    # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, method='cmes-ibo')
+    experiment(exp='ackley_5d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, method='cbo')
+    experiment(exp='ackley_5d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, method='qei')
+    experiment(exp='ackley_5d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, method='ts')
+    experiment(exp='ackley_5d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, method='cmes-ibo')
     # experiment(n_init=10, method='cbo')
 
 
