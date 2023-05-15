@@ -1,13 +1,20 @@
-from typing import List
+from typing import List, Callable
 import numpy as np
+import torch
+from torch import tensor
+from botorch.test_functions import Rastrigin, Rosenbrock
 from matplotlib import pyplot as plt
+
+
+from .general import sample_pts, feasible_filter_gen
+from botorch.utils.transforms import unnormalize
 
 class Data_Factory:
     """
     Collections of different objective functions
     """
 
-    def __generate_config(self, dim, num):
+    def __generate_config(self, dim, num) -> None:
         """Generate required num & dim config following uniform distribution"""
         if dim == 1:
             self.config = np.random.uniform(low=[-1], high=[1], size=[num, dim])
@@ -17,7 +24,7 @@ class Data_Factory:
                 low=-1 * np.ones(dim), high=1 * np.ones(dim), size=[num, dim]
             )
 
-    def convex_1(self, dim: int = 3, num: int = 1000) -> np:
+    def convex_1(self, dim: int = 3, num: int = 1000) -> np.ndarray:
         """
         simple d-dim convex function
         """
@@ -26,7 +33,7 @@ class Data_Factory:
         self.data = np.hstack([self.config, self.target_value])
         return self.data
 
-    def convex_2(self, dim: int = 3, num: int = 1000) -> np:
+    def convex_2(self, dim: int = 3, num: int = 1000) -> np.ndarray:
         """
         simple d-dim convex function for optimization
         """
@@ -86,7 +93,7 @@ class Data_Factory:
         return self.data
 
     @staticmethod
-    def nearest(np_data, point: List) -> np:
+    def nearest(np_data:np.ndarray, point: List) -> np:
         """
         Tool to find nearest data point
         """
@@ -113,3 +120,78 @@ class Data_Factory:
         plt.title("1-D Demo of Original Data")
         plt.xlabel("Config")
         plt.ylabel("Target Value")
+
+
+class Constrained_Data_Factory(Data_Factory):
+    """
+    Collections of different objective functions, together with their constraints.
+    For each test function, use sobel engine to sample x_tensor, 
+     Return:
+        x_tensor, or standardized_x_tensor
+        y_tensor or f_func, 
+        list of c_tensor or list of c_func for SCBO < 0
+    """
+    def __init__(self, num_pts:int = 20000) -> None:
+        super().__init__()
+        self.dtype = torch.float
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self._num_pts = num_pts
+    
+    def _generate_x_tensor(self, dim:int, num:int) -> tensor:
+        '''
+        return samples in [0, 1]^dim
+        '''
+        x_tensor = sample_pts(lb=torch.zeros(dim), ub=torch.ones(dim), n_pts=num,  dim=dim, seed=0)
+        return x_tensor.to(device=self.device, dtype=self.dtype)
+    
+    @staticmethod
+    def evaluate_func(lb:tensor, ub:tensor, func:Callable, x_tensor:tensor) -> tensor:
+        return torch.tensor([func(unnormalize(x, (lb, ub))) for x in x_tensor])
+
+
+    def rastrigin_1D(self, scbo_format=False) -> List[tensor]:
+        """https://www.sfu.ca/~ssurjano/rastr.html"""
+        self._name = 'Rastrigin 1D'
+        dim = 1
+        self.lb, self.ub = torch.ones(dim) * -5, torch.ones(dim) * 5
+        self.objective = lambda x: -Rastrigin(dim=1)(x)
+        self.c_func1 = lambda x: -(x+2)**2 + 0.25  # |x - -2| < 0.5
+        self.c_func1_scbo = lambda x: -self.c_func1(x)
+        self.c_func_list = [self.c_func1_scbo]
+        self.x_tensor = self._generate_x_tensor(dim=1, num=self._num_pts)
+        self.x_tensor_range = unnormalize(self.x_tensor, (self.lb, self.ub))
+        self.y_tensor = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.objective, self.x_tensor).unsqueeze(-1)
+        self.c_tensor1 = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.c_func1, self.x_tensor).unsqueeze(-1)
+        self.c_tensor_list = [self.c_tensor1]
+        self.feasible_filter = feasible_filter_gen(self.c_tensor_list, [0])
+        self.constraint_threshold_list = [0]
+        self.constraint_confidence_list = [0.5]
+
+        assert torch.any(self.feasible_filter)
+
+        __feasible_y = torch.where(self.feasible_filter, self.y_tensor.squeeze(), float('-inf'))
+        self.maximum = __feasible_y.max()
+        self.max_arg = __feasible_y.argmax()
+
+        if not scbo_format:
+            return self.x_tensor_range, self.y_tensor, self.c_tensor_list
+        else:
+            return self.x_tensor, self.objective, self.c_func_list
+        
+
+    def visualize_1d(self,):
+        fontsize = 25
+        plt.figure(figsize=[12, 10])
+        plt.title(self._name, fontsize=fontsize)
+        plt.scatter(self.x_tensor_range.squeeze().numpy(), self.y_tensor.squeeze().numpy(), c='black', s=1, label='Samples')
+        feasible_x = self.x_tensor_range[self.feasible_filter]
+        bounds = [feasible_x.min(), feasible_x.max()]
+        plt.vlines(x = bounds, ymin=self.y_tensor.min(), ymax=self.maximum, color='blue', label='feasible region')
+        plt.scatter(self.x_tensor_range[self.max_arg].numpy(), self.y_tensor[self.max_arg].numpy(), c='red', s=100, marker='*', label='Optimum' )
+        plt.legend(fontsize=fontsize/1.4)
+        plt.xlabel('X')
+        plt.ylabel("Y")
+        plt.savefig(f"./res/illustration/{self._name}")
+        plt.close()
+
+
