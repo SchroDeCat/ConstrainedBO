@@ -462,6 +462,8 @@ class DK_BO_AE_C_M():
         ### optimization loop
         for i in iterator:
             _candidate_idx_c_list = [None for i in range(self.c_num)]
+            
+            _acq = 'lcb' if i // 2 and acq == 'ci' else 'ci'
             if real_beta:
                 beta = (2 * np.log((self.x_tensor.size(0) * (np.pi * (self.init_x.size(0) + 1)) ** 2) /(6 * _delta))) ** 0.5
             # acq values
@@ -470,14 +472,14 @@ class DK_BO_AE_C_M():
                 _candidate_idx_f = self.f_model.intersect_CI_next_point(self.x_tensor[self.roi_filter], 
                                                                         max_test_x_lcb=f_max_test_x_lcb[self.roi_filter], 
                                                                         min_test_x_ucb=f_min_test_x_ucb[self.roi_filter], 
-                                                                        acq=acq, beta=beta, return_idx=True)
+                                                                        acq=_acq, beta=beta, return_idx=True)
 
                 for c_idx, (c_uci_filter, c_max_test_x_lcb, c_min_test_x_ucb) in enumerate(zip(self.c_uci_filter_list, c_max_test_x_lcb_list, c_min_test_x_ucb_list)):
                     if sum(c_uci_filter) > 0:
                         _candidate_idx_c = self.c_model_list[c_idx].intersect_CI_next_point(self.x_tensor[c_uci_filter], 
                                                                 max_test_x_lcb=c_max_test_x_lcb[c_uci_filter], 
                                                                 min_test_x_ucb=c_min_test_x_ucb[c_uci_filter], 
-                                                                acq=acq, beta=beta, return_idx=True)
+                                                                acq=_acq, beta=beta, return_idx=True)
                         _candidate_idx_c_list[c_idx] = _candidate_idx_c
             else:
                 _candidate_idx_f = self.f_model.next_point(self.x_tensor[self.roi_filter], acq, "love", return_idx=True, beta=beta,)
@@ -487,19 +489,24 @@ class DK_BO_AE_C_M():
                         _candidate_idx_c_list[c_idx] = _candidate_idx_c
             
             # locate max acq
-            _f_acq = self.f_model.acq_val[_candidate_idx_f]
-            _c_acq_list = torch.tensor([float('-inf') for _ in range(self.c_num)])
-            for c_idx, c_uci_filter in enumerate(self.c_uci_filter_list):
-                if sum(c_uci_filter) > 0:
-                    _c_acq_list[c_idx] = self.c_model_list[c_idx].acq_val[_candidate_idx_c_list[c_idx]]
-            _c_acq_list_max = torch.max(_c_acq_list, dim=0)
-
-            if _c_acq_list_max.values > _f_acq:
-                assert _c_acq_list_max.values > float("-inf")
-                _c_idx = _c_acq_list_max.indices
-                candidate_idx = util_array[self.c_uci_filter_list[_c_idx]][_candidate_idx_c_list[_c_idx]]
+            if i // 2:
+                _acq_value = torch.prod(torch.cat([model.acq_value for model in self.c_model_list]), dim=0)
+                _acq_value = torch.mul(_acq_value. f_model.acq_value)
+                candidate_idx = _acq_value.argmax()
             else:
-                candidate_idx = util_array[self.roi_filter][_candidate_idx_f]
+                _f_acq = self.f_model.acq_val[_candidate_idx_f]
+                _c_acq_list = torch.tensor([float('-inf') for _ in range(self.c_num)])
+                for c_idx, c_uci_filter in enumerate(self.c_uci_filter_list):
+                    if sum(c_uci_filter) > 0:
+                        _c_acq_list[c_idx] = self.c_model_list[c_idx].acq_val[_candidate_idx_c_list[c_idx]]
+                _c_acq_list_max = torch.max(_c_acq_list, dim=0)
+
+                if _c_acq_list_max.values > _f_acq:
+                    assert _c_acq_list_max.values > float("-inf")
+                    _c_idx = _c_acq_list_max.indices
+                    candidate_idx = util_array[self.c_uci_filter_list[_c_idx]][_candidate_idx_c_list[_c_idx]]
+                else:
+                    candidate_idx = util_array[self.roi_filter][_candidate_idx_f]
 
             # update obs
             _candidate_idx_list[i] = candidate_idx

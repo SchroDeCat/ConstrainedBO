@@ -126,10 +126,8 @@ def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidenc
                 c_sci_filter = _c_filter_lcb >= c_threshold
                 c_roi_filter = _c_filter_ucb >= c_threshold
                 c_uci_filter = c_roi_filter.logical_xor(c_sci_filter) # Q: do we want real uci? it could be two strict
-                if sum(c_sci_filter) > 0:
-                    f_roi_filter = _f_filter_ucb >= _f_filter_lcb[c_sci_filter.squeeze()].max() 
-                else:
-                    f_roi_filter = _f_filter_ucb >= _f_filter_lcb[feasibility_filter.squeeze()].min()
+                f_roi_threshold = _f_filter_lcb[c_sci_filter.squeeze()].max() if torch.any(c_sci_filter) else _f_filter_lcb[feasibility_filter.squeeze()].min()
+                f_roi_filter = _f_filter_ucb >= f_roi_threshold
                 roi_filter = c_roi_filter.logical_and(f_roi_filter)
 
                 _minimum_pick = 10
@@ -226,7 +224,8 @@ def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidenc
 
                 _filter_gap = _f_filter_ucb.min() - _f_filter_lcb[_f_lcb_filter].max()
                 _iterator_info = {'beta': beta, 'fbeta': filter_beta, "roi_beta": _roi_beta, "regret":reg_record[rep, :_step_size].min(), "Filter Ratio": filter_ratio.detach().item(), 
-                                  "Filter Gap": _filter_gap.detach().item(), 'roi noise': _cbo.f_model.likelihood.noise.detach().item(), 'global noise': _f_model.likelihood.noise.detach().item()}
+                                  "Filter Gap": _filter_gap.detach().item(), 'f_roi_threshold': f_roi_threshold.detach().item(),
+                                  'roi noise': _cbo.f_model.likelihood.noise.detach().item(), 'global noise': _f_model.likelihood.noise.detach().item()}
 
                 iterator.set_postfix(_iterator_info)
 
@@ -324,6 +323,7 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
         global_noise_constraint = gpytorch.constraints.Interval(1e-8, 1e-3)
         # global_noise_constraint = gpytorch.constraints.Interval(0.1,.6)
         roi_noise_constraint = gpytorch.constraints.Interval(1e-5,0.1)
+        # roi_noise_constraint = gpytorch.constraints.Interval(1e-8,1e-3)
         name = f"{name}-noise_c"
     else:
         global_noise_constraint = None
@@ -444,10 +444,9 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
                 for c_idx in range(c_num):
                     c_sci_filter = c_sci_filter.logical_and(c_sci_filter_list[c_idx])
 
-                if sum(c_sci_filter) > 0:                   # single f_roi
-                    f_roi_filter = _f_filter_ucb >= _f_filter_lcb[c_sci_filter.squeeze()].max() 
-                else:
-                    f_roi_filter = _f_filter_ucb >= _f_filter_lcb[feasibility_filter.squeeze()].min()
+                f_roi_threshold = _f_filter_lcb[c_sci_filter.squeeze()].max() if torch.any(c_sci_filter) else  _f_filter_lcb[feasibility_filter.squeeze()].min()          # single f_roi
+                f_roi_filter = _f_filter_ucb >= f_roi_threshold
+
 
 
                 roi_filter = f_roi_filter.clone()           # single general roi
@@ -458,7 +457,7 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
                 _minimum_pick = 10                      # minimum pick in generl roi
                 if sum(roi_filter[observed==1]) <= _minimum_pick:
                     c_ucb_observed_min = torch.min(torch.cat([c_ucb[observed==1].reshape(1,-1) for c_ucb in c_ucb_list], dim=0), dim=0).values
-                    _, indices = torch.topk(c_ucb_observed_min, min(_minimum_pick, data_size))
+                    _, indices = torch.topk(c_ucb_observed_min, min(_minimum_pick, c_ucb_observed_min.size(0)))
                     for idx in indices:
                         roi_filter[util_array[observed==1][idx]] = 1
 
@@ -527,8 +526,14 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
 
                 _filter_gap = _f_filter_ucb.min() - _f_filter_lcb[_f_lcb_filter].max()
                 _iterator_info = {'beta': beta, 'fbeta': filter_beta, "roi_beta": _roi_beta, "regret":reg_record[rep, :_step_size].min(), "Filter Ratio": filter_ratio.detach().item(), 
-                                  "Filter Gap": _filter_gap.detach().item(), 'roi noise': _cbo_m.f_model.likelihood.noise.detach().item(), 'global noise': _f_model.likelihood.noise.detach().item()}
-
+                                  "Filter Gap": _filter_gap.detach().item(), "F roi threshold": f_roi_threshold.detach().item(),
+                                #   'roi noise': _cbo_m.f_model.likelihood.noise.detach().item(), 'global noise': _f_model.likelihood.noise.detach().item()
+                                  }
+                roi_y_min, roi_y_max = y_tensor[roi_filter].min().detach().item(), y_tensor[roi_filter].max().detach().item()
+                _iterator_info['Roi Size'] = f"{roi_filter.sum().detach().item()}"
+                _iterator_info['Roi Accuracy'] = f"{(roi_filter.logical_and(feasible_filter).sum()/roi_filter.sum()).detach().item():.2%}"
+                _iterator_info['Csi Accuracy'] = f"{(c_sci_filter.logical_and(feasible_filter).sum()/c_sci_filter.sum()).detach().item():.2%}"
+                _iterator_info['Roi Y range'] = f"{roi_y_min:.2f}, {roi_y_max:.2f}"
                 iterator.set_postfix(_iterator_info)
 
                 ucb_filtered_idx = util_array[roi_filter]
