@@ -1,36 +1,20 @@
-import math
 import os
 import warnings
 from dataclasses import dataclass
-
-import gpytorch
 import torch
-from gpytorch.constraints import Interval
-from gpytorch.kernels import MaternKernel, ScaleKernel
-from gpytorch.likelihoods import GaussianLikelihood
-from gpytorch.mlls import ExactMarginalLogLikelihood
-from torch import Tensor
-from torch.quasirandom import SobolEngine
 
-from botorch.fit import fit_gpytorch_mll
 # Constrained Max Posterior Sampling s a new sampling class, similar to MaxPosteriorSampling,
 # which implements the constrained version of Thompson Sampling described in [1].
-from botorch.generation.sampling import ConstrainedMaxPosteriorSampling
-from botorch.models import SingleTaskGP
-from botorch.models.model_list_gp_regression import ModelListGP
 from botorch.test_functions import Ackley
 from botorch.utils.transforms import unnormalize
 
 from src.opt import cbo, cbo_multi
 from src.utils import sample_pts, feasible_filter_gen
-# from .scbo_botorch import SCBO
 
 warnings.filterwarnings("ignore")
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 dtype = torch.float
-
-SMOKE_TEST = os.environ.get("SMOKE_TEST")
 
 dim=20
 # Here we define the example 20D Ackley function
@@ -54,7 +38,7 @@ c_fun_list = [c_fun_1, c_fun_2, c_fun_3]
 c_num = len(c_fun_list)
 
 n_init = 10
-n_iter = 50
+n_iter = 60
 train_times = 50
 n_repeat = 2
 max_cholesky_size = float("inf")  # Always use Cholesky
