@@ -241,8 +241,14 @@ class ConstrainedMaxPosteriorSampling(MaxPosteriorSampling):
             Tensor of samples from `X`, where
             `X[..., i, :]` is the `i`-th sample.
         """
-        posterior = self.model.posterior(X, observation_noise=observation_noise)
-        samples = posterior.rsample(sample_shape=torch.Size([num_samples])).T
+        # posterior = self.model.posterior(X, observation_noise=observation_noise)
+        # samples = posterior.rsample(sample_shape=torch.Size([num_samples])).T
+        self.model.eval()
+        with torch.no_grad(), gpytorch.settings.fast_pred_var(), gpytorch.settings.max_root_decomposition_size(200):
+            with gpytorch.settings.fast_pred_samples():
+                posterior = self.model(X)
+                samples = posterior.rsample(torch.Size([num_samples]))
+                samples = samples.T
 
         # c_posterior = self.constraint_model.posterior(
         #     X, observation_noise=observation_noise
@@ -253,8 +259,9 @@ class ConstrainedMaxPosteriorSampling(MaxPosteriorSampling):
         with torch.no_grad(), gpytorch.settings.use_toeplitz(False), gpytorch.settings.fast_pred_var():
             for c_model in self.constraint_model.models:
                 c_model.eval()
-                posterior = c_model.forward(X.float())
-                constraint_samples_list.append(posterior.rsample(sample_shape=torch.Size([num_samples])))
+                with gpytorch.settings.fast_pred_samples():
+                    posterior = c_model(X)
+                    constraint_samples_list.append(posterior.rsample(torch.Size([num_samples])))
         constraint_samples = torch.cat(constraint_samples_list, dim=0).T.unsqueeze(0)
         valid_samples = constraint_samples <= 0
         if valid_samples.shape[-1] > 1:  # if more than one constraint

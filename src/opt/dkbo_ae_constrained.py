@@ -550,7 +550,8 @@ class DK_BO_AE_C_M():
                         else:
                             _num_sample = kwargs.get('num_sample', 5)
                         self.f_model.model.eval()
-                        _samples = self.f_model.model(self.x_tensor).rsample(torch.Size([_num_sample]))
+                        _posterior = self.f_model.model(self.x_tensor)
+                        _samples = _posterior.rsample(torch.Size([_num_sample]))
                     feasible_obs_filter = feasible_filter_gen(self.init_c_list, self.c_threshold_list)
                     if sum(feasible_obs_filter) > 0:
                         _best_y = torch.max(self.init_y[feasible_obs_filter])
