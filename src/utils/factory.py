@@ -389,6 +389,50 @@ class Constrained_Data_Factory(Data_Factory):
             return self.x_tensor, self.objective, self.c_func_list
 
 
+    def water_converter_32d_neg_3c(self, scbo_format=False) -> List[tensor]:
+        '''
+        All subreward < 92000
+        '''
+        self._name = "Water_Converter_16C_neg_3c"
+        self.dim = 32
+        _cali_factor = 10
+        raw_threshold = 96000
+        c_num = 2
+        raw_factor = 109000
+        _data_path = f"{os.path.dirname(os.path.abspath(__file__))}/../../data/Sydney_Data.csv"
+        raw_data = np.loadtxt(_data_path, delimiter=',')[:self._num_pts]
+        data = torch.from_numpy(raw_data).to(device=device, dtype=dtype)
+        self.x_tensor_range = data[:,:32]
+        self.lb, self.ub = self.x_tensor_range.min(dim=0).values, self.x_tensor_range.max(dim=0).values
+        self.x_tensor = (self.x_tensor_range - self.lb) / (self.ub - self.lb)
+        self.y_tensor = data[:,-1].reshape([-1, 1]) / (raw_factor/_cali_factor) - 13 * _cali_factor
+        raw_rewards = torch.from_numpy(raw_data[:,-17:-1]).to(device=device, dtype=dtype)
+        self.objective = lambda x: Constrained_Data_Factory.nearest_approx(data, unnormalize(x, (self.lb, self.ub)), 32, reward_idx=-1) / (raw_factor/_cali_factor) - _cali_factor
+        self.c_tensor_3 = -torch.linalg.norm(self.x_tensor_range, dim=-1)**(1/4) + 2000**(1/4)
+        self.c_func_3 = lambda x: torch.linalg.norm(unnormalize(x, (self.lb, self.ub)), dim=-1)**(1/4) - 2000**(1/4)
+        self.c_tensor_list = [(-raw_rewards[:, c_idx].reshape([-1,1]) + raw_threshold)/raw_factor for c_idx in range(c_num)]
+        self.c_tensor_list.append(self.c_tensor_3.reshape([-1,1]))
+        self.c_func_list = [lambda x: -(-Constrained_Data_Factory.nearest_approx(data, unnormalize(x, (self.lb, self.ub)), 32, reward_idx=c_idx+32) + raw_threshold)/raw_factor for c_idx in range(c_num)]
+        self.c_func_list.append(self.c_func_3)
+        self.constraint_threshold_list = [0 for _ in range(c_num+1)]
+        self.constraint_confidence_list = [0.5 for _ in range(c_num+1)]
+
+        self.feasible_filter = feasible_filter_gen(self.c_tensor_list, self.constraint_threshold_list)
+        # self.feasible_filter = self.feasible_filter.unsqueeze(0)
+        assert torch.any(self.feasible_filter)
+        print(f"Name {self._name} feasible pts {self.feasible_filter.sum()} over {self.feasible_filter.size(0)}")
+
+        __feasible_y = torch.where(self.feasible_filter, self.y_tensor.squeeze(), float('-inf'))
+        self.maximum = __feasible_y.max()
+        self.max_arg = __feasible_y.argmax()
+
+        if not scbo_format:
+            return self.x_tensor_range, self.y_tensor, self.c_tensor_list
+            # return self.x_tensor, self.y_tensor, self.c_tensor_list
+        else:
+            return self.x_tensor, self.objective, self.c_func_list
+
+
     def visualize_1d(self, if_norm:bool=False):
         fontsize = 25
         plt.figure(figsize=[12, 10])

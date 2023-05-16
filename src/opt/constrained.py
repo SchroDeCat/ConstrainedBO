@@ -542,8 +542,9 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
                     break
 
                 _filter_gap = _f_filter_ucb.min() - _f_filter_lcb[_f_lcb_filter].max()
-                _iterator_info = {'beta': beta, 'fbeta': filter_beta, "roi_beta": _roi_beta, "regret":reg_record[rep, :_step_size].min(), "Filter Ratio": filter_ratio.detach().item(), 
-                                  "Filter Gap": _filter_gap.detach().item(), "F roi threshold": f_roi_threshold.detach().item(),
+                # 'beta': beta, 'fbeta': filter_beta, "roi_beta": _roi_beta,
+                _iterator_info = { "regret":reg_record[rep, :_step_size].min(), "Filter Ratio": filter_ratio.detach().item(), 
+                                #   "Filter Gap": _filter_gap.detach().item(), "F roi threshold": f_roi_threshold.detach().item(),
                                 #   'roi noise': _cbo_m.f_model.likelihood.noise.detach().item(), 'global noise': _f_model.likelihood.noise.detach().item()
                                   }
                 roi_y_min, roi_y_max = y_tensor[roi_filter].min().detach().item(), y_tensor[roi_filter].max().detach().item()
