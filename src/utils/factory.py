@@ -262,6 +262,45 @@ class Constrained_Data_Factory(Data_Factory):
         else:
             return self.x_tensor, self.objective, self.c_func_list
 
+    def rosenbrock_4d(self, scbo_format=False) -> List[tensor]:
+        self._name = 'Rosenbrock_2C'
+        dim = 10
+        self.dim = dim
+        self.lb, self.ub = torch.ones(dim) * -3, torch.ones(dim) * 5
+        self.lb, self.ub =self.lb.to(device=device, dtype=dtype), self.ub.to(device=device, dtype=dtype)
+        self.objective = lambda x: -0.5 * Ackley(dim=dim)(x) # deliberately set to be 10, still work on dim = 1
+        # self.c_func1 = lambda x: -torch.linalg.vector_norm(x, dim=-1)**(1/2) + (5)**(1/2)
+        self.c_func1 = lambda x: -torch.linalg.vector_norm(x, dim=-1)**(1/2) + (8)**(1/2)
+        # self.c_func1 = lambda x: torch.prod(x, dim=-1)**(1/dim)
+        self.c_func1_scbo = lambda x: -self.c_func1(x)
+        # self.c_func2 = lambda x: torch.linalg.vector_norm(x, dim=-1)**(1/2) - (1.3)**(1/2)
+        self.c_func2 = lambda x: torch.prod(torch.abs(x[:2]), dim=-1)**(1/2) - 1 ** (1/2)
+        self.c_func2_scbo = lambda x: -self.c_func2(x)
+        self.c_func_list = [self.c_func1_scbo, self.c_func2_scbo]
+        self.x_tensor = self._generate_x_tensor(dim=dim, num=self._num_pts, seed=0).to(device=device, dtype=dtype)
+        self.x_tensor_range = unnormalize(self.x_tensor, (self.lb, self.ub))
+        self.y_tensor = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.objective, self.x_tensor).unsqueeze(-1)
+        self.c_tensor1 = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.c_func1, self.x_tensor).unsqueeze(-1)
+        self.c_tensor2 = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.c_func2, self.x_tensor).unsqueeze(-1)
+        self.c_tensor_list = [self.c_tensor1, self.c_tensor2]
+        self.constraint_threshold_list = [0, 0]
+        self.constraint_confidence_list = [0.5, 0.5]
+        self.feasible_filter = feasible_filter_gen(self.c_tensor_list, self.constraint_threshold_list)
+
+        assert torch.any(self.feasible_filter)
+        print(f"Name {self._name} feasible pts {self.feasible_filter.sum()} over {self.feasible_filter.size(0)}")
+
+        __feasible_y = torch.where(self.feasible_filter, self.y_tensor.squeeze(), float('-inf'))
+        self.maximum = __feasible_y.max()
+        self.max_arg = __feasible_y.argmax()
+
+        if not scbo_format:
+            return self.x_tensor_range, self.y_tensor, self.c_tensor_list
+            # return self.x_tensor, self.y_tensor, self.c_tensor_list
+        else:
+            return self.x_tensor, self.objective, self.c_func_list
+
+
     def visualize_1d(self, if_norm:bool=False):
         fontsize = 25
         plt.figure(figsize=[12, 10])
