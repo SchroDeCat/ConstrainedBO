@@ -317,17 +317,18 @@ class Constrained_Data_Factory(Data_Factory):
         self._name = "Water_Converter_16C"
         self.dim = 32
         c_num = 16
-        raw_threshold = 80000
+        _cali_factor = 10
+        raw_threshold = 82000
         raw_factor = 109000
         _data_path = f"{os.path.dirname(os.path.abspath(__file__))}/../../data/Sydney_Data.csv"
-        raw_data = np.loadtxt(_data_path, delimiter=',')
+        raw_data = np.loadtxt(_data_path, delimiter=',')[:self._num_pts]
         data = torch.from_numpy(raw_data).to(device=device, dtype=dtype)
         self.x_tensor_range = data[:,:32]
         self.lb, self.ub = self.x_tensor_range.min(dim=0).values, self.x_tensor_range.max(dim=0).values
         self.x_tensor = (self.x_tensor_range - self.lb) / (self.ub - self.lb)
-        self.y_tensor = data[:,-1].reshape([-1, 1]) / (raw_factor/2) - 26
+        self.y_tensor = data[:,-1].reshape([-1, 1]) / (raw_factor/_cali_factor) - 13 * _cali_factor
         raw_rewards = torch.from_numpy(raw_data[:,-17:-1]).to(device=device, dtype=dtype)
-        self.objective = lambda x: Constrained_Data_Factory.nearest_approx(data, unnormalize(x, (self.lb, self.ub)), 32, reward_idx=-1) / (raw_factor/2) - 26
+        self.objective = lambda x: Constrained_Data_Factory.nearest_approx(data, unnormalize(x, (self.lb, self.ub)), 32, reward_idx=-1) / (raw_factor/_cali_factor) - _cali_factor
         self.c_tensor_list = [(raw_rewards[:, c_idx].reshape([-1,1]) - raw_threshold)/raw_factor for c_idx in range(c_num)]
         self.c_func_list = [lambda x: -(Constrained_Data_Factory.nearest_approx(data, unnormalize(x, (self.lb, self.ub)), 32, reward_idx=c_idx+32)- raw_threshold)/raw_factor for c_idx in range(c_num)]
         self.constraint_threshold_list = [0 for _ in range(c_num)]
