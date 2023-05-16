@@ -316,9 +316,9 @@ class Constrained_Data_Factory(Data_Factory):
         '''
         self._name = "Water_Converter_16C"
         self.dim = 32
-        c_num = 16
         _cali_factor = 10
-        raw_threshold = 82000
+        raw_threshold = 87000
+        c_num = 2
         raw_factor = 109000
         _data_path = f"{os.path.dirname(os.path.abspath(__file__))}/../../data/Sydney_Data.csv"
         raw_data = np.loadtxt(_data_path, delimiter=',')[:self._num_pts]
