@@ -549,6 +549,8 @@ class DK_BO_AE_C_M():
                             _num_sample = 100
                         else:
                             _num_sample = kwargs.get('num_sample', 5)
+                            # _num_sample = kwargs.get('num_sample', 20)
+                            # _num_sample = kwargs.get('num_sample', 2)
                         self.f_model.model.eval()
                         _posterior = self.f_model.model(self.x_tensor)
                         _samples = _posterior.rsample(torch.Size([_num_sample]))
@@ -566,6 +568,7 @@ class DK_BO_AE_C_M():
                         # _subsample_num = kwargs.get("subsample_num", 1000)
                         _subsample_num = kwargs.get("subsample_num", self.data_size)
                         _subsample_num = min(_subsample_num, 10000)
+                        # _subsample_num = min(_subsample_num, 4000)
                         subsample_filter = np.random.choice(self.data_size, _subsample_num, replace=False)
                         # subsample_filter = np.arange(self.data_size)
                         # sample c
