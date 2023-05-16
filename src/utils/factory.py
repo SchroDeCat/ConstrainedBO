@@ -5,6 +5,8 @@ from torch import tensor
 from botorch.test_functions import Rastrigin, Rosenbrock, Ackley, Levy, DixonPrice
 from matplotlib import pyplot as plt
 
+import os
+
 
 from .general import sample_pts, feasible_filter_gen
 from botorch.utils.transforms import unnormalize
@@ -150,7 +152,15 @@ class Constrained_Data_Factory(Data_Factory):
     @staticmethod
     def evaluate_func(lb:tensor, ub:tensor, func:Callable, x_tensor:tensor) -> tensor:
         return torch.tensor([func(unnormalize(x, (lb, ub))) for x in x_tensor])
-
+    
+    @staticmethod
+    def nearest_approx(data:tensor, point:tensor, reward_start_idx:int=32, reward_idx:int=-1) -> tensor:
+        """
+        Tool to find nearest data point (L1) and return corresponding value
+        """
+        diff = torch.abs(data[:, :reward_start_idx] - point)
+        index = torch.argmin(diff.sum(dim=-1).values)
+        return data[index, reward_idx]
 
     def rastrigin_1D(self, scbo_format=False) -> List[tensor]:
         """https://www.sfu.ca/~ssurjano/rastr.html"""
@@ -274,7 +284,7 @@ class Constrained_Data_Factory(Data_Factory):
         # self.c_func1 = lambda x: torch.prod(x, dim=-1)**(1/dim)
         self.c_func1_scbo = lambda x: -self.c_func1(x)
         # self.c_func2 = lambda x: torch.linalg.vector_norm(x, dim=-1)**(1/2) - (1.3)**(1/2)
-        self.c_func2 = lambda x: torch.prod(torch.abs(x[:2]), dim=-1)**(1/2) - 1 ** (1/2)
+        self.c_func2 = lambda x: torch.prod(torch.abs(x[:2]), dim=-1)**(1/3) - 1 ** (1/2)
         self.c_func2_scbo = lambda x: -self.c_func2(x)
         self.c_func_list = [self.c_func1_scbo, self.c_func2_scbo]
         self.x_tensor = self._generate_x_tensor(dim=dim, num=self._num_pts, seed=0).to(device=device, dtype=dtype)
@@ -300,6 +310,43 @@ class Constrained_Data_Factory(Data_Factory):
         else:
             return self.x_tensor, self.objective, self.c_func_list
 
+    def water_converter_32d(self, scbo_format=False) -> List[tensor]:
+        '''
+        All subreward > 87682.7047
+        '''
+        self._name = "Water_Converter_16C"
+        self.dim = 32
+        c_num = 16
+        raw_threshold = 80000
+        raw_factor = 109000
+        _data_path = f"{os.path.dirname(os.path.abspath(__file__))}/../../data/Sydney_Data.csv"
+        raw_data = np.loadtxt(_data_path, delimiter=',')
+        data = torch.from_numpy(raw_data).to(device=device, dtype=dtype)
+        self.x_tensor_range = data[:,:32]
+        self.lb, self.ub = self.x_tensor_range.min(dim=0).values, self.x_tensor_range.max(dim=0).values
+        self.x_tensor = (self.x_tensor_range - self.lb) / (self.ub - self.lb)
+        self.y_tensor = data[:,-1].reshape([-1, 1]) / (raw_factor/2) - 26
+        raw_rewards = torch.from_numpy(raw_data[:,-17:-1]).to(device=device, dtype=dtype)
+        self.objective = lambda x: Constrained_Data_Factory.nearest_approx(data, unnormalize(x, (self.lb, self.ub)), 32, reward_idx=-1) / (raw_factor/2) - 26
+        self.c_tensor_list = [(raw_rewards[:, c_idx].reshape([-1,1]) - raw_threshold)/raw_factor for c_idx in range(c_num)]
+        self.c_func_list = [lambda x: -(Constrained_Data_Factory.nearest_approx(data, unnormalize(x, (self.lb, self.ub)), 32, reward_idx=c_idx+32)- raw_threshold)/raw_factor for c_idx in range(c_num)]
+        self.constraint_threshold_list = [0 for _ in range(c_num)]
+        self.constraint_confidence_list = [0.5 for _ in range(c_num)]
+
+        self.feasible_filter = feasible_filter_gen(self.c_tensor_list, self.constraint_threshold_list)
+        # self.feasible_filter = self.feasible_filter.unsqueeze(0)
+        assert torch.any(self.feasible_filter)
+        print(f"Name {self._name} feasible pts {self.feasible_filter.sum()} over {self.feasible_filter.size(0)}")
+
+        __feasible_y = torch.where(self.feasible_filter, self.y_tensor.squeeze(), float('-inf'))
+        self.maximum = __feasible_y.max()
+        self.max_arg = __feasible_y.argmax()
+
+        if not scbo_format:
+            return self.x_tensor_range, self.y_tensor, self.c_tensor_list
+            # return self.x_tensor, self.y_tensor, self.c_tensor_list
+        else:
+            return self.x_tensor, self.objective, self.c_func_list
 
     def visualize_1d(self, if_norm:bool=False):
         fontsize = 25

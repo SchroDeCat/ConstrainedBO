@@ -337,7 +337,7 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
     for c_idx in range(c_num):
         feasibility_filter.logical_and(c_tensor_list[c_idx] > c_threshold_list[c_idx])
     
-    assert sum(feasibility_filter) > 0
+    assert torch.any(feasibility_filter)
     name = name if low_dim else name+'-hd'
 
     feasible_filter = feasible_filter_gen(c_tensor_list, c_threshold_list)
