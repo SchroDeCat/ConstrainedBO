@@ -565,6 +565,7 @@ class DK_BO_AE_C_M():
                     elif _acq in ['cmes-ibo']:
                         # _subsample_num = kwargs.get("subsample_num", 1000)
                         _subsample_num = kwargs.get("subsample_num", self.data_size)
+                        _subsample_num = min(_subsample_num, 10000)
                         subsample_filter = np.random.choice(self.data_size, _subsample_num, replace=False)
                         # subsample_filter = np.arange(self.data_size)
                         # sample c
@@ -577,8 +578,8 @@ class DK_BO_AE_C_M():
                                 _c_tensor_list.append(_c_sample)
                         _feasible_filter = feasible_filter_gen(_c_tensor_list, self.c_threshold_list)
                         if _feasible_filter.sum() == 0:
-                            _feasible_filter = feasible_filter_gen(self.c_tensor_list, self.c_threshold_list)
-                        _max_f_samples = _samples[:,_feasible_filter].max(dim=-1).values.squeeze()
+                            _feasible_filter = feasible_filter_gen(self.c_tensor_list, self.c_threshold_list)[subsample_filter]
+                        _max_f_samples = _samples[:,subsample_filter][:,_feasible_filter].max(dim=-1).values.squeeze()
                         # sample f
                         self.f_model.model.eval()
                         _mvn = self.f_model.model(self.x_tensor[subsample_filter])

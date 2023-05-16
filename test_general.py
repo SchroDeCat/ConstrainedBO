@@ -11,7 +11,7 @@ import warnings
 import tqdm
 
 EXPS = ['rastrigin_1d', 'rastrigin_10d', 'ackley_5d', 'ackley_10d','rosenbrock_5d', 'water_converter_32d', 'gpu_performance_16d']
-METHODs = ['cbo', 'scbo', 'cmes-ibo', 'ts', 'qei', 'random']
+METHODs = ['cbo',  'qei', 'scbo', 'ts','random', 'cmes-ibo', ]
 
 def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_times:int=50, n_iter:int=20, n_init:int=10, constrain_noise:bool=True)->None:
     exp = exp.lower()
@@ -39,6 +39,17 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
             x_tensor, y_func, c_func_list = cbo_factory.ackley_5d(scbo_format=scbo)
         else:
             x_tensor, y_tensor, c_tensor_list = cbo_factory.ackley_5d(scbo_format=scbo)
+        constraint_threshold_list, constraint_confidence_list = cbo_factory.constraint_threshold_list, cbo_factory.constraint_confidence_list
+        feasible_filter = cbo_factory.feasible_filter
+        y_tensor = cbo_factory.y_tensor
+        cbo_factory.visualize_1d(if_norm=True)
+    elif exp == "rosenbrock_5d":
+        cbo_factory = Constrained_Data_Factory(num_pts=50000)
+        scbo = 'scbo' in method
+        if scbo:
+            x_tensor, y_func, c_func_list = cbo_factory.rosenbrock_5d(scbo_format=scbo)
+        else:
+            x_tensor, y_tensor, c_tensor_list = cbo_factory.rosenbrock_5d(scbo_format=scbo)
         constraint_threshold_list, constraint_confidence_list = cbo_factory.constraint_threshold_list, cbo_factory.constraint_confidence_list
         feasible_filter = cbo_factory.feasible_filter
         y_tensor = cbo_factory.y_tensor
@@ -130,7 +141,14 @@ if __name__ == "__main__":
     # experiment(exp='ackley_5d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, method='qei')
     # experiment(exp='ackley_5d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, method='ts')
     # experiment(exp='ackley_5d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, method='cmes-ibo')
-    experiment(exp='ackley_5d', n_init=n_init, n_repeat=2, n_iter=n_iter, method='scbo')
+    # experiment(exp='ackley_5d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, method='scbo')
+    # experiment(exp='rosenbrock_5d', n_init=10, n_repeat=1, n_iter=20, method='qei', constrain_noise=True)
+    # experiment(exp='rosenbrock_5d', n_init=10, n_repeat=1, n_iter=20, method='cmes-ibo', constrain_noise=True)
+    experiment(exp='rosenbrock_5d', n_init=10, n_repeat=1, n_iter=20, method='scbo', constrain_noise=True)
+    for method in METHODs:
+        print(f"Method {method}")
+        experiment(exp='rosenbrock_5d', n_init=10, n_repeat=1, n_iter=20, method=method, constrain_noise=True)
+    
     # experiment(n_init=10, method='cbo')
 
 
