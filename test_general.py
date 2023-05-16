@@ -44,7 +44,7 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         y_tensor = cbo_factory.y_tensor
         cbo_factory.visualize_1d(if_norm=True)
     elif exp == "rosenbrock_5d":
-        cbo_factory = Constrained_Data_Factory(num_pts=100000)
+        cbo_factory = Constrained_Data_Factory(num_pts=50000)
         scbo = 'scbo' in method
         if scbo:
             x_tensor, y_func, c_func_list = cbo_factory.rosenbrock_5d(scbo_format=scbo)
@@ -143,7 +143,8 @@ if __name__ == "__main__":
     # experiment(exp='ackley_5d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, method='cmes-ibo')
     # experiment(exp='ackley_5d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, method='scbo')
     # experiment(exp='rosenbrock_5d', n_init=10, n_repeat=1, n_iter=20, method='qei', constrain_noise=True)
-
+    # experiment(exp='rosenbrock_5d', n_init=10, n_repeat=1, n_iter=20, method='cmes-ibo', constrain_noise=True)
+    experiment(exp='rosenbrock_5d', n_init=10, n_repeat=1, n_iter=20, method='scbo', constrain_noise=True)
     for method in METHODs:
         print(f"Method {method}")
         experiment(exp='rosenbrock_5d', n_init=10, n_repeat=1, n_iter=20, method=method, constrain_noise=True)

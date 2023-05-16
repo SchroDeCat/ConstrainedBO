@@ -225,7 +225,7 @@ class Constrained_Data_Factory(Data_Factory):
             return self.x_tensor, self.objective, self.c_func_list
 
     def rosenbrock_5d(self, scbo_format=False) -> List[tensor]:
-        self._name = 'Rosenbrock'
+        self._name = 'Rosenbrock_3C'
         dim = 2
         self.dim = dim
         self.lb, self.ub = torch.ones(dim) * -3, torch.ones(dim) * 5
@@ -235,15 +235,18 @@ class Constrained_Data_Factory(Data_Factory):
         self.c_func1_scbo = lambda x: -self.c_func1(x)
         self.c_func2 = lambda x: -Levy(dim=dim)(x)/(dim*100) + .1
         self.c_func2_scbo = lambda x: -self.c_func2(x)
-        self.c_func_list = [self.c_func1_scbo, self.c_func2_scbo]
+        self.c_func3 = lambda x: torch.linalg.vector_norm(x, dim=-1)**(1/2) - (1.3)**(1/2)
+        self.c_func3_scbo = lambda x: -self.c_func3(x)
+        self.c_func_list = [self.c_func1_scbo, self.c_func2_scbo, self.c_func3_scbo]
         self.x_tensor = self._generate_x_tensor(dim=dim, num=self._num_pts, seed=0).to(device=device, dtype=dtype)
         self.x_tensor_range = unnormalize(self.x_tensor, (self.lb, self.ub))
         self.y_tensor = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.objective, self.x_tensor).unsqueeze(-1)
         self.c_tensor1 = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.c_func1, self.x_tensor).unsqueeze(-1)
         self.c_tensor2 = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.c_func2, self.x_tensor).unsqueeze(-1)
-        self.c_tensor_list = [self.c_tensor1, self.c_tensor2]
-        self.constraint_threshold_list = [0, 0]
-        self.constraint_confidence_list = [0.5, 0.5]
+        self.c_tensor3 = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.c_func3, self.x_tensor).unsqueeze(-1)
+        self.c_tensor_list = [self.c_tensor1, self.c_tensor2, self.c_tensor3]
+        self.constraint_threshold_list = [0, 0, 0]
+        self.constraint_confidence_list = [0.5, 0.5, 0.5]
         self.feasible_filter = feasible_filter_gen(self.c_tensor_list, self.constraint_threshold_list)
 
         assert torch.any(self.feasible_filter)
