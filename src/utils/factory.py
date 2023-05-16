@@ -159,7 +159,7 @@ class Constrained_Data_Factory(Data_Factory):
         Tool to find nearest data point (L1) and return corresponding value
         """
         diff = torch.abs(data[:, :reward_start_idx] - point)
-        index = torch.argmin(diff.sum(dim=-1).values)
+        index = torch.argmin(diff.sum(dim=-1))
         return data[index, reward_idx]
 
     def rastrigin_1D(self, scbo_format=False) -> List[tensor]:
