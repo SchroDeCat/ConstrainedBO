@@ -230,6 +230,8 @@ class Constrained_Data_Factory(Data_Factory):
         plt.title(self._name, fontsize=fontsize)
         if if_norm:
             base_x = torch.linalg.vector_norm(self.x_tensor_range, dim=-1)
+        else:
+            base_x = self.x_tensor_range
         plt.scatter(base_x.squeeze().to(device='cpu').numpy(), self.y_tensor.squeeze().to(device='cpu').numpy(), c='black', s=1, label='Objective')
         feasible_x = base_x[self.feasible_filter].to(device='cpu')
         feasible_y = self.y_tensor[self.feasible_filter].to(device='cpu')
