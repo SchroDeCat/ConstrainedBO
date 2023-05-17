@@ -10,7 +10,8 @@ import random
 import warnings
 import tqdm
 
-EXPS = ['rastrigin_1d', 'rastrigin_10d', 'ackley_5d', 'ackley_10d','rosenbrock_5d', 'rosenbrock_4d', 'water_converter_32d', 'gpu_performance_16d']
+EXPS = ['rastrigin_1d', 'rastrigin_10d', 'ackley_5d', 'ackley_10d','rosenbrock_5d', 'rosenbrock_4d', 
+        'water_converter_32d', 'water_converter_32d_neg', 'water_converter_32d_neg_3c', 'gpu_performance_16d']
 METHODs = ['cbo',  'qei', 'scbo', 'ts','random', 'cmes-ibo', ]
 
 def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_times:int=50, n_iter:int=20, n_init:int=10, constrain_noise:bool=True)->None:
@@ -76,6 +77,28 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         feasible_filter = cbo_factory.feasible_filter
         y_tensor = cbo_factory.y_tensor
         cbo_factory.visualize_1d(if_norm=True)
+    elif exp == "water_converter_32d_neg":
+        cbo_factory = Constrained_Data_Factory(num_pts=30000)
+        scbo = 'scbo' in method
+        if scbo:
+            x_tensor, y_func, c_func_list = cbo_factory.water_converter_32d_neg(scbo_format=scbo)
+        else:
+            x_tensor, y_tensor, c_tensor_list = cbo_factory.water_converter_32d_neg(scbo_format=scbo)
+        constraint_threshold_list, constraint_confidence_list = cbo_factory.constraint_threshold_list, cbo_factory.constraint_confidence_list
+        feasible_filter = cbo_factory.feasible_filter
+        y_tensor = cbo_factory.y_tensor
+        cbo_factory.visualize_1d(if_norm=True)
+    elif exp == "water_converter_32d_neg_3c":
+        cbo_factory = Constrained_Data_Factory(num_pts=70000)
+        scbo = 'scbo' in method
+        if scbo:
+            x_tensor, y_func, c_func_list = cbo_factory.water_converter_32d_neg_3c(scbo_format=scbo)
+        else:
+            x_tensor, y_tensor, c_tensor_list = cbo_factory.water_converter_32d_neg_3c(scbo_format=scbo)
+        constraint_threshold_list, constraint_confidence_list = cbo_factory.constraint_threshold_list, cbo_factory.constraint_confidence_list
+        feasible_filter = cbo_factory.feasible_filter
+        y_tensor = cbo_factory.y_tensor
+        cbo_factory.visualize_1d(if_norm=True)
     else:
         raise NotImplementedError(f"Exp {exp} no implemented")
 
@@ -102,7 +125,7 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
                     spectrum_norm=False, retrain_interval=1, n_iter=n_iter, filter_interval=1, acq="ci", 
                     ci_intersection=True, verbose=True, lr=1e-4, name=name, return_result=True, retrain_nn=True,
                     plot_result=True, save_result=True, save_path='./res/cbo', fix_seed=True,  pretrained=False, ae_loc=None, 
-                    _minimum_pick = 10, _delta = 0.2, beta=1, filter_beta=1, exact_gp=False, constrain_noise=constrain_noise, local_model=False)
+                    _minimum_pick = 10, _delta = 0.2, beta=.8, filter_beta=.8, exact_gp=False, constrain_noise=constrain_noise, local_model=False)
 
     elif method =='scbo':
         init_feasible_reward = y_tensor[:n_init][feasible_filter[:n_init]]
@@ -148,7 +171,7 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
 
 if __name__ == "__main__":
     n_repeat = 10
-    n_init = 20
+    n_init = 10
     n_iter = 50
     # experiment(n_init=5, method='qei')
     # experiment(n_init=5, method='ts')
@@ -173,6 +196,13 @@ if __name__ == "__main__":
     #     experiment(exp='rosenbrock_4d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, method=method, constrain_noise=True)
     
     # experiment(n_init=10, method='cbo')
-    experiment(exp='water_converter_32d', n_init=10, n_repeat=3, n_iter=20, method='cbo', constrain_noise=True)
+    # experiment(exp='water_converter_32d_neg', n_init=20, n_repeat=10, n_iter=100, method='cbo', constrain_noise=True)
+    # experiment(exp='water_converter_32d_neg', n_init=20, n_repeat=10, n_iter=100, method='qei', constrain_noise=True)
+    # experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method='cmes-ibo', constrain_noise=True)
+    experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method='cbo', constrain_noise=True)
+    # for method in METHODs:
+    #     if method in ['cbo', 'cmes-ibo']:
+    #         continue
+    #     experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method=method, constrain_noise=True)
 
 
