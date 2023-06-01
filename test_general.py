@@ -109,7 +109,7 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         regret = baseline_cbo_m(x_tensor, y_tensor, c_tensor_list, 
                                 constraint_threshold_list=constraint_threshold_list, constraint_confidence_list=constraint_confidence_list,
                                 n_init=n_init, n_repeat=n_repeat, train_times=train_times, n_iter=n_iter,
-                                regularize=False, low_dim=True,
+                                regularize=False, low_dim=False,
                                 spectrum_norm=False, retrain_interval=1, acq=method, 
                                 verbose=True, lr=1e-4, name=name, 
                                 return_result=True, retrain_nn=True,
@@ -121,11 +121,11 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
 
         regret = cbo_multi(x_tensor, y_tensor, c_tensor_list, 
                     constraint_threshold_list=constraint_threshold_list, constraint_confidence_list=constraint_confidence_list,
-                    n_init=n_init, n_repeat=n_repeat, train_times=train_times, regularize=False, low_dim=True,
+                    n_init=n_init, n_repeat=n_repeat, train_times=train_times, regularize=False, low_dim=False,
                     spectrum_norm=False, retrain_interval=1, n_iter=n_iter, filter_interval=1, acq="ci", 
                     ci_intersection=True, verbose=True, lr=1e-4, name=name, return_result=True, retrain_nn=True,
                     plot_result=True, save_result=True, save_path='./res/cbo', fix_seed=True,  pretrained=False, ae_loc=None, 
-                    _minimum_pick = 10, _delta = 0.2, beta=.8, filter_beta=.8, exact_gp=False, constrain_noise=constrain_noise, local_model=False)
+                    _minimum_pick = 10, _delta = 0.2, beta=2, filter_beta=2, exact_gp=False, constrain_noise=constrain_noise, local_model=False)
 
     elif method =='scbo':
         init_feasible_reward = y_tensor[:n_init][feasible_filter[:n_init]]
@@ -196,10 +196,11 @@ if __name__ == "__main__":
     #     experiment(exp='rosenbrock_4d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, method=method, constrain_noise=True)
     
     # experiment(n_init=10, method='cbo')
+    experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method='scbo', constrain_noise=True)
     # experiment(exp='water_converter_32d_neg', n_init=20, n_repeat=10, n_iter=100, method='cbo', constrain_noise=True)
     # experiment(exp='water_converter_32d_neg', n_init=20, n_repeat=10, n_iter=100, method='qei', constrain_noise=True)
     # experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method='cmes-ibo', constrain_noise=True)
-    experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method='cbo', constrain_noise=True)
+    # experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method='cbo', constrain_noise=True)
     # for method in METHODs:
     #     if method in ['cbo', 'cmes-ibo']:
     #         continue

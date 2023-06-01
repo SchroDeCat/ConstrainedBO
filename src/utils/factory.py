@@ -108,7 +108,7 @@ class Data_Factory:
         return np_data[index], index
 
     def obj_func(self, test_p: list) -> float:
-        """For query druing optimization"""
+        """For query during optimization"""
         input_dim = np.shape(test_p)[0]
         if input_dim != np.size(test_p) and input_dim > 1:
             value = [
@@ -328,7 +328,7 @@ class Constrained_Data_Factory(Data_Factory):
         self.x_tensor = (self.x_tensor_range - self.lb) / (self.ub - self.lb)
         self.y_tensor = data[:,-1].reshape([-1, 1]) / (raw_factor/_cali_factor) - 13 * _cali_factor
         raw_rewards = torch.from_numpy(raw_data[:,-17:-1]).to(device=device, dtype=dtype)
-        self.objective = lambda x: Constrained_Data_Factory.nearest_approx(data, unnormalize(x, (self.lb, self.ub)), 32, reward_idx=-1) / (raw_factor/_cali_factor) - _cali_factor
+        self.objective = lambda x: Constrained_Data_Factory.nearest_approx(data, unnormalize(x, (self.lb, self.ub)), 32, reward_idx=-1) / (raw_factor/_cali_factor) - 13 * _cali_factor
         self.c_tensor_list = [(raw_rewards[:, c_idx].reshape([-1,1]) - raw_threshold)/raw_factor for c_idx in range(c_num)]
         self.c_func_list = [lambda x: -(Constrained_Data_Factory.nearest_approx(data, unnormalize(x, (self.lb, self.ub)), 32, reward_idx=c_idx+32)- raw_threshold)/raw_factor for c_idx in range(c_num)]
         self.constraint_threshold_list = [0 for _ in range(c_num)]
@@ -367,7 +367,7 @@ class Constrained_Data_Factory(Data_Factory):
         self.x_tensor = (self.x_tensor_range - self.lb) / (self.ub - self.lb)
         self.y_tensor = data[:,-1].reshape([-1, 1]) / (raw_factor/_cali_factor) - 13 * _cali_factor
         raw_rewards = torch.from_numpy(raw_data[:,-17:-1]).to(device=device, dtype=dtype)
-        self.objective = lambda x: Constrained_Data_Factory.nearest_approx(data, unnormalize(x, (self.lb, self.ub)), 32, reward_idx=-1) / (raw_factor/_cali_factor) - _cali_factor
+        self.objective = lambda x: Constrained_Data_Factory.nearest_approx(data, unnormalize(x, (self.lb, self.ub)), 32, reward_idx=-1) / (raw_factor/_cali_factor) - 13 * _cali_factor
         self.c_tensor_list = [(-raw_rewards[:, c_idx].reshape([-1,1]) + raw_threshold)/raw_factor for c_idx in range(c_num)]
         self.c_func_list = [lambda x: -(-Constrained_Data_Factory.nearest_approx(data, unnormalize(x, (self.lb, self.ub)), 32, reward_idx=c_idx+32) + raw_threshold)/raw_factor for c_idx in range(c_num)]
         self.constraint_threshold_list = [0 for _ in range(c_num)]
@@ -407,7 +407,7 @@ class Constrained_Data_Factory(Data_Factory):
         self.x_tensor = (self.x_tensor_range - self.lb) / (self.ub - self.lb)
         self.y_tensor = data[:,-1].reshape([-1, 1]) / (raw_factor/_cali_factor) - 13 * _cali_factor
         raw_rewards = torch.from_numpy(raw_data[:,-17:-1]).to(device=device, dtype=dtype)
-        self.objective = lambda x: Constrained_Data_Factory.nearest_approx(data, unnormalize(x, (self.lb, self.ub)), 32, reward_idx=-1) / (raw_factor/_cali_factor) - _cali_factor
+        self.objective = lambda x: Constrained_Data_Factory.nearest_approx(data, unnormalize(x, (self.lb, self.ub)), 32, reward_idx=-1) / (raw_factor/_cali_factor) - 13 *  _cali_factor
         self.c_tensor_3 = -torch.linalg.norm(self.x_tensor_range, dim=-1)**(1/4) + 2000**(1/4)
         self.c_func_3 = lambda x: torch.linalg.norm(unnormalize(x, (self.lb, self.ub)), dim=-1)**(1/4) - 2000**(1/4)
         self.c_tensor_list = [(-raw_rewards[:, c_idx].reshape([-1,1]) + raw_threshold)/raw_factor for c_idx in range(c_num)]
