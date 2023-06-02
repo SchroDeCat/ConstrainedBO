@@ -7,17 +7,15 @@ import torch
 import warnings
 import numpy as np
 
-from ..SCBO import SCBO
 from ..models import DKL, AE, beta_CI
 from ..utils import save_res, model_list_CI, intersecting_ROI_globe, feasible_filter_gen
 from .dkbo_ae_constrained import DK_BO_AE_C_M
-# from math import ceil, floor
 from scipy.stats import norm
  
 DEVICE = torch.device('cpu')
 
 def cbo_multi_nontest(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, constraint_confidence_list, n_init=10,  train_times=10, beta=2, 
-                      regularize=False, low_dim=True, spectrum_norm=False, retrain_interval=1, filter_interval=1, acq="ci", ci_intersection=True, verbose=True, lr=1e-2,
+                      regularize=False, low_dim=True, spectrum_norm=False, acq="ci", ci_intersection=True, verbose=True, lr=1e-2,
                       pretrained=False, ae_loc=None, _minimum_pick = 10,  _delta = 0.2, filter_beta=.05, exact_gp=False, constrain_noise=False, local_model=True):
     '''
     Proposed ROI based method, default acq = ci
@@ -159,6 +157,7 @@ def cbo_multi_nontest(x_tensor, y_tensor, c_tensor_list, constraint_threshold_li
             _f_model_passed_in, _c_model_list_passed_in = None, None
         else:
             _f_model_passed_in, _c_model_list_passed_in = _f_model, _c_model_list
+            
         _cbo_m = DK_BO_AE_C_M(x_tensor, y_tensor, c_tensor_list, roi_filter, c_uci_filter_list, lr=lr, spectrum_norm=spectrum_norm, low_dim=low_dim,
                             n_init=n_init,  train_iter=train_times, regularize=regularize, dynamic_weight=False,  retrain_nn=True, c_threshold_list=c_threshold_list,
                             max=0, pretrained_nn=ae, verbose=verbose, init_x=init_x, init_y=init_y, init_c_list=init_c_list, exact_gp=exact_gp, noise_constraint=roi_noise_constraint,
@@ -186,7 +185,7 @@ def cbo_multi_nontest(x_tensor, y_tensor, c_tensor_list, constraint_threshold_li
         query_num = 1
         _roi_beta_passed_in = _roi_beta  if not (default_beta) else 0 # allow it to calculate internal ROI_beta
         _cbo_m.query_f_c(n_iter=query_num, acq=acq, study_interval=10, study_res_path=None,  if_tqdm=False, 
-                        retrain_interval=retrain_interval, ci_intersection=ci_intersection, 
+                        retrain_interval=1, ci_intersection=ci_intersection, 
                         f_max_test_x_lcb=f_max_test_x_lcb, f_min_test_x_ucb=f_min_test_x_ucb,
                         c_max_test_x_lcb_list=c_max_test_x_lcb_list, c_min_test_x_ucb_list=c_min_test_x_ucb_list, 
                         beta=_roi_beta_passed_in)
