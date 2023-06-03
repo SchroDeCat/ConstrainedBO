@@ -39,7 +39,8 @@ class DK_BO_AE_C():
     def __init__(self, x_tensor, y_tensor, c_tensor, roi_filter, c_uci_filter, optimization_ratio, c_threshold,
                     n_init:int=10, lr=1e-6, train_iter:int=10, regularize=True, spectrum_norm=False,
                     dynamic_weight=False, verbose=False, max=None, robust_scaling=True, pretrained_nn=None, low_dim=True,
-                    record_loss=False, retrain_nn=True, exact_gp=False, noise_constraint=None, **kwargs):
+                    record_loss=False, retrain_nn=True, exact_gp=False, noise_constraint=None, output_scale_constraint=None,
+                    **kwargs):
 
         # scale input
         ScalerClass = RobustScaler if robust_scaling else StandardScaler
@@ -60,6 +61,7 @@ class DK_BO_AE_C():
         self.data_size = self.x_tensor.size(0)
         self.train_iter = train_iter
         self.retrain_nn = retrain_nn
+        self.output_scale_constraint = output_scale_constraint
         feasible_filter = feasible_filter_gen([c_tensor], [c_threshold])
         self.maximum = torch.max(self.y_tenso[feasible_filter]) if max==None else max
         self.max_regret = self.maximum - torch.min(self.y_tensor)
@@ -84,14 +86,14 @@ class DK_BO_AE_C():
         if f_model is None:
             self.f_model = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, lr= self.lr, low_dim=self.low_dim, 
                             pretrained_nn=self.pretrained_nn, retrain_nn=retrain_nn, spectrum_norm=spectrum_norm, exact_gp=exact_gp, 
-                            noise_constraint = self.noise_constraint)
+                            noise_constraint = self.noise_constraint, output_scale_constraint=self.output_scale_constraint)
         else:
             self.f_model = f_model
         
         if c_model is None:
             self.c_model = DKL(self.init_x, self.init_c.squeeze(), n_iter=self.train_iter, lr= self.lr, low_dim=self.low_dim, 
                             pretrained_nn=self.pretrained_nn, retrain_nn=retrain_nn, spectrum_norm=spectrum_norm, exact_gp=exact_gp, 
-                            noise_constraint = self.noise_constraint)
+                            noise_constraint = self.noise_constraint, output_scale_constraint=self.output_scale_constraint)
         else:
             self.c_model = c_model
         
@@ -191,9 +193,9 @@ class DK_BO_AE_C():
                 self._c_length_scale_record = self.c_model.model.covar_module.base_kernel.base_kernel.lengthscale
 
             self.f_model = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, lr= self.lr, low_dim=self.low_dim, pretrained_nn=self.pretrained_nn, retrain_nn=self.retrain_nn,
-                                 spectrum_norm=self.spectrum_norm, exact_gp=self.exact, noise_constraint=self.noise_constraint)
+                                 spectrum_norm=self.spectrum_norm, exact_gp=self.exact, noise_constraint=self.noise_constraint, output_scale_constraint=self.output_scale_constraint)
             self.c_model = DKL(self.init_x, self.init_c.squeeze(), n_iter=self.train_iter, lr= self.lr, low_dim=self.low_dim, pretrained_nn=self.pretrained_nn, retrain_nn=self.retrain_nn,
-                                 spectrum_norm=self.spectrum_norm, exact_gp=self.exact, noise_constraint=self.noise_constraint)
+                                 spectrum_norm=self.spectrum_norm, exact_gp=self.exact, noise_constraint=self.noise_constraint, output_scale_constraint=self.output_scale_constraint)
             
             if self.record_loss:
                 self._f_pure_dkl = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, low_dim=self.low_dim, pretrained_nn=None, lr=self.lr, spectrum_norm=self.spectrum_norm, exact_gp=self.exact)
@@ -271,7 +273,7 @@ class DK_BO_AE_C():
                 self._c_length_scale_record = self.c_model.model.covar_module.base_kernel.base_kernel.lengthscale
 
             self.c_model = DKL(self.init_x, self.init_c.squeeze(), n_iter=self.train_iter, lr= self.lr, low_dim=self.low_dim, pretrained_nn=self.pretrained_nn, retrain_nn=self.retrain_nn,
-                                 spectrum_norm=self.spectrum_norm, exact_gp=self.exact, noise_constraint=self.noise_constraint)
+                                 spectrum_norm=self.spectrum_norm, exact_gp=self.exact, noise_constraint=self.noise_constraint, output_scale_constraint=self.output_scale_constraint)
                
             if i % retrain_interval != 0 and self.low_dim:
                 self.c_model.feature_extractor.load_state_dict(self._c_state_dict_record, strict=False)
@@ -300,12 +302,17 @@ class DK_BO_AE_C_M():
     def __init__(self, x_tensor, y_tensor, c_tensor_list, roi_filter, c_uci_filter_list, c_threshold_list,
                     n_init:int=10, lr=1e-6, train_iter:int=10, regularize=True, spectrum_norm=False,
                     dynamic_weight=False, verbose=False, max=None, robust_scaling=True, pretrained_nn=None, low_dim=True,
-                    record_loss=False, retrain_nn=True, exact_gp=False, noise_constraint=None, **kwargs):
+                    record_loss=False, retrain_nn=True, exact_gp=False, noise_constraint=None, output_scale_constraint=None,
+                    standardize=True,  **kwargs):
 
         # scale input
         ScalerClass = RobustScaler if robust_scaling else StandardScaler
         self.scaler = ScalerClass().fit(x_tensor)
-        x_tensor = self.scaler.transform(x_tensor)
+        if standardize:
+            x_tensor = self.scaler.transform(x_tensor)
+            self.x_tensor = torch.from_numpy(x_tensor).float()
+        else:
+            self.x_tensor = x_tensor.float()
         # init vars
         self.regularize = regularize
         self.lr = lr
@@ -316,12 +323,13 @@ class DK_BO_AE_C_M():
         self.n_neighbors = min(self.n_init, 10)
         self.Lambda = 1
         self.dynamic_weight = dynamic_weight
-        self.x_tensor = torch.from_numpy(x_tensor).float()
+        
         self.y_tensor = y_tensor.float()
         self.c_tensor_list = [c_tensor.float() for c_tensor in c_tensor_list]
         self.data_size = self.x_tensor.size(0)
         self.train_iter = train_iter
         self.retrain_nn = retrain_nn
+        self.output_scale_constraint = output_scale_constraint
         feasible_filter = feasible_filter_gen(c_tensor_list, c_threshold_list)
         self.maximum = torch.max(self.y_tensor[feasible_filter]) if max==None else max
         self.max_regret = self.maximum - torch.min(self.y_tensor)
@@ -349,14 +357,14 @@ class DK_BO_AE_C_M():
         if f_model is None:
             self.f_model = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, lr= self.lr, low_dim=self.low_dim, 
                             pretrained_nn=self.pretrained_nn, retrain_nn=retrain_nn, spectrum_norm=spectrum_norm, exact_gp=exact_gp, 
-                            noise_constraint = self.noise_constraint)
+                            noise_constraint = self.noise_constraint, output_scale_constraint=self.output_scale_constraint)
         else:
             self.f_model = f_model
         
         if c_model_list is None:
             self.c_model_list = [DKL(self.init_x, self.init_c_list[c_idx].squeeze(), n_iter=self.train_iter, lr= self.lr, low_dim=self.low_dim,
                                     spectrum_norm=spectrum_norm, exact_gp=exact_gp, pretrained_nn=self.pretrained_nn, retrain_nn=retrain_nn,
-                                    noise_constraint=self.noise_constraint,) for c_idx in range(self.c_num)]
+                                    noise_constraint=self.noise_constraint, output_scale_constraint=self.output_scale_constraint) for c_idx in range(self.c_num)]
         else:
             self.c_model_list = c_model_list
         
@@ -364,7 +372,8 @@ class DK_BO_AE_C_M():
 
         if self.record_loss:
             assert not (pretrained_nn is None)
-            self._f_pure_dkl = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, low_dim=self.low_dim, pretrained_nn=None, lr=self.lr, spectrum_norm=spectrum_norm, exact_gp=exact_gp)
+            self._f_pure_dkl = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, low_dim=self.low_dim, 
+                                   pretrained_nn=None, lr=self.lr, spectrum_norm=spectrum_norm, exact_gp=exact_gp)
             # self._c_pure_dkl = DKL(self.init_x, self.init_c.squeeze(), n_iter=self.train_iter, low_dim=self.low_dim, pretrained_nn=None, lr=self.lr, spectrum_norm=spectrum_norm, exact_gp=exact_gp)
             self.f_loss_record = {"DK-AE":[], "DK":[]}
         self.cuda = torch.cuda.is_available()
@@ -398,13 +407,19 @@ class DK_BO_AE_C_M():
             self._c_output_scale_record_list = [self.c_model_list[c_idx].model.covar_module.base_kernel.outputscale for c_idx in range(self.c_num)]
             self._c_length_scale_record_list = [self.c_model_list[c_idx].model.covar_module.base_kernel.base_kernel.lengthscale for c_idx in range(self.c_num)]
 
-        self.f_model = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, lr= self.lr, low_dim=self.low_dim, pretrained_nn=self.pretrained_nn, retrain_nn=self.retrain_nn,
-                                spectrum_norm=self.spectrum_norm, exact_gp=self.exact, noise_constraint=self.noise_constraint)
-        self.c_model_list = [DKL(self.init_x, self.init_c_list[c_idx].squeeze(), n_iter=self.train_iter, lr= self.lr, low_dim=self.low_dim, pretrained_nn=self.pretrained_nn, retrain_nn=self.retrain_nn,
-                                spectrum_norm=self.spectrum_norm, exact_gp=self.exact, noise_constraint=self.noise_constraint) for c_idx in range(self.c_num)]
+        self.f_model = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, lr= self.lr, 
+                                low_dim=self.low_dim, pretrained_nn=self.pretrained_nn, retrain_nn=self.retrain_nn,
+                                spectrum_norm=self.spectrum_norm, exact_gp=self.exact, 
+                                noise_constraint=self.noise_constraint, output_scale_constraint=self.output_scale_constraint)
+        self.c_model_list = [DKL(self.init_x, self.init_c_list[c_idx].squeeze(), n_iter=self.train_iter, lr= self.lr, 
+                                low_dim=self.low_dim, pretrained_nn=self.pretrained_nn, retrain_nn=self.retrain_nn,
+                                spectrum_norm=self.spectrum_norm, exact_gp=self.exact, 
+                                noise_constraint=self.noise_constraint, output_scale_constraint=self.output_scale_constraint) for c_idx in range(self.c_num)]
         
         if self.record_loss:
-            self._f_pure_dkl = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, low_dim=self.low_dim, pretrained_nn=None, lr=self.lr, spectrum_norm=self.spectrum_norm, exact_gp=self.exact)
+            self._f_pure_dkl = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, 
+                                   low_dim=self.low_dim, pretrained_nn=None, lr=self.lr, spectrum_norm=self.spectrum_norm, 
+                                   exact_gp=self.exact)
         
         if i % retrain_interval != 0 and self.low_dim:
             self.f_model.feature_extractor.load_state_dict(self._f_state_dict_record, strict=False)

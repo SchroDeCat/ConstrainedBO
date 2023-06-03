@@ -51,16 +51,19 @@ class LargeFeatureExtractor(torch.nn.Sequential):
         self.add_module('linear3',  add_spectrum_norm(torch.nn.Linear(500, 50)))
         # test if using higher dimensions could be better
         if low_dim:
-            self.add_module('relu3', torch.nn.ReLU())
+            # self.add_module('relu3', torch.nn.ReLU())
+            self.add_module('relu3', torch.nn.LeakyReLU())
             self.add_module('linear4',  add_spectrum_norm(torch.nn.Linear(50, 1)))
         else:
             self.add_module('relu3', torch.nn.ReLU())
             self.add_module('linear4',  add_spectrum_norm(torch.nn.Linear(50, 10)))
 
 class GPRegressionModel(gpytorch.models.ExactGP):
-        def __init__(self, train_x, train_y, gp_likelihood, gp_feature_extractor, low_dim=True):
+        def __init__(self, train_x, train_y, gp_likelihood, gp_feature_extractor, low_dim=True, output_scale_constraint=None):
             super(GPRegressionModel, self).__init__(train_x, train_y, gp_likelihood)
             self.feature_extractor = gp_feature_extractor
+            output_scale = output_scale_constraint if output_scale_constraint else gpytorch.constraints.Interval(0.7,5.0)
+            # outputscale_constraint=gpytorch.constraints.Interval(0.7,1.0)),
             try: # gpytorch 1.6.0 support
                 self.mean_module = gpytorch.means.ConstantMean(constant_prior=train_y.mean())
             except Exception: # gpytorch 1.9.1
@@ -68,8 +71,7 @@ class GPRegressionModel(gpytorch.models.ExactGP):
             if low_dim:
                 self.covar_module = gpytorch.kernels.GridInterpolationKernel(
                     gpytorch.kernels.ScaleKernel(gpytorch.kernels.RBFKernel(ard_num_dims=1), 
-                    # outputscale_constraint=gpytorch.constraints.Interval(0.7,1.0)),
-                    outputscale_constraint=gpytorch.constraints.Interval(0.7,5.0)),
+                    outputscale_constraint=output_scale,),
                     num_dims=1, grid_size=100)
             else:
                 self.covar_module = gpytorch.kernels.LinearKernel(num_dims=10)
@@ -109,7 +111,7 @@ class GPRegressionModel(gpytorch.models.ExactGP):
             """
             self.eval()  # make sure model is in eval mode
             # input transforms are applied at `posterior` in `eval` mode, and at
-            # `model.forward()` at the training time
+            # model.forward()` at the training time
             # X = self.model(X)
             # with gpt_posterior_settings():
             mvn = self.forward(X.float())

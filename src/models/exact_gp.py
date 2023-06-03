@@ -6,12 +6,13 @@ UCB, TS, (q)EI.
 import gpytorch
 
 class ExactGPRegressionModel(gpytorch.models.ExactGP):
-        def __init__(self, train_x, train_y, gp_likelihood, gp_feature_extractor, low_dim=True):
+        def __init__(self, train_x, train_y, gp_likelihood, gp_feature_extractor, low_dim=True, output_scale_constraint=None):
             '''
             Exact GP:
             Leave placeholder for gp_feature_extractor
             '''
             super(ExactGPRegressionModel, self).__init__(train_x, train_y, gp_likelihood)
+            output_scale = output_scale_constraint if output_scale_constraint else gpytorch.constraints.Interval(0.7,5.0)
             # self.mean_module = gpytorch.means.ZeroMean()
             if low_dim:
                 # self.covar_module = gpytorch.kernels.ScaleKernel(gpytorch.kernels.RBFKernel())
@@ -19,7 +20,7 @@ class ExactGPRegressionModel(gpytorch.models.ExactGP):
                     gpytorch.kernels.MaternKernel(
                     nu=2.5, ard_num_dims=train_x.size(-1), 
                     lengthscale_constraint=gpytorch.constraints.Interval(0.005, 4.0)
-                ))
+                ), outputscale_constraint=output_scale,)
             else:
                 self.covar_module = gpytorch.kernels.LinearKernel(num_dims=train_x.size(-1))
             try: # gpytorch 1.6.0 support

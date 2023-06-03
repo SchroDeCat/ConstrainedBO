@@ -51,9 +51,9 @@ def beta_CI(lcb, ucb, beta):
 
 class DKL():
 
-    def __init__(self, train_x, train_y, n_iter=2, lr=1e-6, output_scale=.7, low_dim=False, 
+    def __init__(self, train_x, train_y, n_iter=2, lr=1e-6, low_dim=False, 
                  pretrained_nn=None, test_split=False, retrain_nn=True, spectrum_norm=False, exact_gp=False, 
-                 noise_constraint=None):
+                 noise_constraint=None, output_scale_constraint=None, **kwargs):
         super().__init__()
         self.training_iterations = n_iter
         self.lr = lr
@@ -66,9 +66,10 @@ class DKL():
         # self.cuda = torch.cuda.is_available()
         self.cuda = False
         self.test_split = test_split
-        self.output_scale = output_scale
+        # self.output_scale = output_scale
         self.retrain_nn = retrain_nn
         self.exact = exact_gp # exact GP overide
+        self.output_scale_constraint = output_scale_constraint
         # self.cuda = False
         # split the dataset
         total_size = train_y.size(0)
@@ -103,9 +104,10 @@ class DKL():
 
 
         self.GPRegressionModel = GPRegressionModel if not self.exact else ExactGPRegressionModel
-        self.model = self.GPRegressionModel(self.train_x, self.train_y, self.likelihood, self.feature_extractor, low_dim=self.low_dim)
-        if self.low_dim:
-            self.model.covar_module.base_kernel.outputscale = self.output_scale
+        self.model = self.GPRegressionModel(self.train_x, self.train_y, self.likelihood, self.feature_extractor, 
+                                            low_dim=self.low_dim, output_scale_constraint=self.output_scale_constraint)
+        # if self.low_dim:
+        #     self.model.covar_module.base_kernel.outputscale = self.output_scale
 
         if self.cuda:
             self.model = self.model.cuda()
@@ -120,7 +122,7 @@ class DKL():
         self.model.train()
         self.likelihood.train()
         record_mae = kwargs.get("record_mae", False) 
-        # Record MAE within a single training
+        # Record MAE within a singl e training
         if record_mae: 
             record_interval = kwargs.get("record_interval", 1)
             self.mae_record = np.zeros(self.training_iterations//record_interval)
@@ -418,7 +420,7 @@ class DKL():
             for idx in range(_test_x.size(0)):
                 tmp_x = torch.cat([self.train_x, _test_x[idx].reshape([1,-1])], dim=0)
                 tmp_y = torch.cat([self.train_y, pred_mean[idx].reshape([1,])])
-                _tmp_model = self.GPRegressionModel(tmp_x, tmp_y, self.likelihood, self.feature_extractor).eval()
+                _tmp_model = self.GPRegressionModel(tmp_x, tmp_y, self.likelihood, output_scale_constraint=self.output_scale_constraint).eval()
                 with torch.no_grad(), gpytorch.settings.fast_pred_var():
                     _tmp_observed_pred = self.likelihood(_tmp_model(_test_x))
                     _tmp_lower, _tmp_upper = _tmp_observed_pred.confidence_region()

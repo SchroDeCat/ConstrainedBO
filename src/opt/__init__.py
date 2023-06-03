@@ -7,3 +7,4 @@ from .optimization import ol_partition_dkbo, pure_dkbo, dkl_opt_test, ol_filter_
 from .menuStrategy import DKBO_OLP
 from .random import RandomOpt
 from .constrained import cbo, cbo_multi, baseline_cbo_m, baseline_scbo
+from .constrained_1step import cbo_multi_nontest
