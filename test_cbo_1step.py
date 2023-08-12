@@ -5,13 +5,14 @@ import pandas as pd
 import numpy as np
 import torch
 import gpytorch
+import random
 
 
 # Constrained Max Posterior Sampling s a new sampling class, similar to MaxPosteriorSampling,
 # which implements the constrained version of Thompson Sampling described in [1].
 
 from src.opt import cbo_multi_nontest
-from src.utils import sample_pts, feasible_filter_gen
+from src.utils import feasible_filter_gen
 
 warnings.filterwarnings("ignore")
 
@@ -82,7 +83,16 @@ constraint_threshold_list = torch.ones(1) * 0.1 # ratio > 0.1
 constraint_confidence_list = torch.ones(1) * 0.5
 feasible_filter = feasible_filter_gen(c_tensor_list, constraint_threshold_list)
 
-print(f"initial reward {y_tensor[:n_init][feasible_filter[:n_init]].squeeze()}")
+print(f"initial reward {y_tensor[observed==1][feasible_filter[observed==1]].squeeze()}")
+
+
+_seed = 2 * 20 + n_init
+torch.manual_seed(_seed)
+np.random.seed(_seed)
+random.seed(_seed)
+torch.cuda.manual_seed(_seed)
+torch.backends.cudnn.benchmark = False
+torch.backends.cudnn.deterministic = True
 
 result = cbo_multi_nontest(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list=constraint_threshold_list, 
                            constraint_confidence_list=constraint_confidence_list,
@@ -96,8 +106,3 @@ result = cbo_multi_nontest(x_tensor, y_tensor, c_tensor_list, constraint_thresho
 
 _f_model, _c_model_list, _cbo_m = result
 print(f'Next Pick X: {_cbo_m.init_x[-1]} Y:{_cbo_m.init_y[-1]} C:{_cbo_m.init_c_list[0][-1]}')
-# TD: denormalize
-
-# def cbo_multi_nontest(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, constraint_confidence_list, n_init=10,  train_times=10, beta=2, 
-                    #   regularize=False, low_dim=True, spectrum_norm=False, acq="ci", ci_intersection=True, verbose=True, lr=1e-2,
-                    #   pretrained=False, ae_loc=None, _minimum_pick = 10,  _delta = 0.2, filter_beta=.05, exact_gp=False, constrain_noise=False, local_model=True):
