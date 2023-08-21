@@ -1,3 +1,6 @@
+'''
+One step CBO
+'''
 import warnings
 from dataclasses import dataclass
 from typing import List

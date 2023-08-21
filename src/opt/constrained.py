@@ -314,7 +314,7 @@ def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidenc
 def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, constraint_confidence_list, n_init=10, n_repeat=2, train_times=10, beta=2, regularize=False, low_dim=True, 
             spectrum_norm=False, retrain_interval=1, n_iter=40, filter_interval=1, acq="ci", ci_intersection=True, verbose=True, lr=1e-2, name="test", return_result=True, retrain_nn=True,
             plot_result=False, save_result=False, save_path=None, fix_seed=False,  pretrained=False, ae_loc=None, _minimum_pick = 10, 
-            _delta = 0.2, filter_beta=.05, exact_gp=False, constrain_noise=False, local_model=True):
+            _delta = 0.2, filter_beta=.05, exact_gp=False, constrain_noise=False, local_model=True, interpolate=True):
     '''
     Proposed ROI based method, default acq = ci
     Support Multiple Constraints
@@ -494,7 +494,7 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
                 _cbo_m = DK_BO_AE_C_M(x_tensor, y_tensor, c_tensor_list, roi_filter, c_uci_filter_list, lr=lr, spectrum_norm=spectrum_norm, low_dim=low_dim,
                                     n_init=n_init,  train_iter=train_times, regularize=regularize, dynamic_weight=False,  retrain_nn=retrain_nn, c_threshold_list=c_threshold_list,
                                     max=max_val, pretrained_nn=ae, verbose=verbose, init_x=init_x, init_y=init_y, init_c_list=init_c_list, exact_gp=exact_gp, noise_constraint=roi_noise_constraint,
-                                    f_model=_f_model_passed_in, c_model_list=_c_model_list_passed_in, observed=observed)
+                                    f_model=_f_model_passed_in, c_model_list=_c_model_list_passed_in, observed=observed, interpolate_prior=interpolate)
 
                 _roi_f_lcb, _roi_f_ucb = _cbo_m.f_model.CI(x_tensor)
                 _roi_c_lcb_list, _roi_c_ucb_list  = model_list_CI(_cbo_m.c_model_list, x_tensor, DEVICE)
@@ -649,7 +649,7 @@ def baseline_cbo_m(x_tensor, y_tensor, c_tensor_list,
                     name="test", return_result=True, retrain_nn=True,
                     plot_result=False, save_result=False, save_path=None, fix_seed=False,  
                     pretrained=False, ae_loc=None,
-                    exact_gp=False, constrain_noise=False):
+                    exact_gp=False, constrain_noise=False, interpolate=False):
     '''
     CEI by Bayesian Optimization with Unknown Constraints
     Michael A. Gelbart, Jasper Snoek, Ryan P. Adams
@@ -730,6 +730,7 @@ def baseline_cbo_m(x_tensor, y_tensor, c_tensor_list,
                                     init_x=init_x, init_y=init_y, 
                                     init_c_list=init_c_list, exact_gp=exact_gp, 
                                     noise_constraint=global_noise_constraint,
+                                    interpolate_prior=interpolate,
                                 )
             # optimize f and passively learn c
             _cbo_m.query_f_passive_c(n_iter=n_iter, acq=acq, retrain_interval=1, if_tqdm=True)

@@ -14,19 +14,7 @@ import datetime
 import itertools
 
 from ..models import DKL
-from sparsemax import Sparsemax
-from scipy.stats import ttest_ind
-from sklearn.cluster import MiniBatchKMeans, KMeans
-from sklearn.metrics.pairwise import pairwise_distances_argmin
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
-from sklearn.kernel_ridge import KernelRidge
-from sklearn.metrics import mean_absolute_error
 from sklearn.preprocessing import StandardScaler, RobustScaler
-from sklearn.cluster import KMeans
-from sklearn.decomposition import PCA
-from sklearn.manifold import TSNE
-from sklearn.neighbors import NearestNeighbors
 
 from ..utils import feasible_filter_gen
 
@@ -350,21 +338,27 @@ class DK_BO_AE_C_M():
         self.c_uci_filter_list = c_uci_filter_list
         self.c_threshold_list = c_threshold_list
 
+        self.interpolate = kwargs.get('interpolate_prior', False)
+
         # load input model / train the ROI model
         f_model = kwargs.get("f_model", None)
         c_model_list = kwargs.get("c_model_list", None)
 
         if f_model is None:
-            self.f_model = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, lr= self.lr, low_dim=self.low_dim, 
+            self.f_model = DKL(self.init_x, self.init_y.squeeze(),
+                            n_iter=self.train_iter, lr= self.lr, low_dim=self.low_dim, 
                             pretrained_nn=self.pretrained_nn, retrain_nn=retrain_nn, spectrum_norm=spectrum_norm, exact_gp=exact_gp, 
-                            noise_constraint = self.noise_constraint, output_scale_constraint=self.output_scale_constraint)
+                            noise_constraint = self.noise_constraint, output_scale_constraint=self.output_scale_constraint,
+                            interpolate_prior = self.interpolate,)
         else:
             self.f_model = f_model
         
         if c_model_list is None:
-            self.c_model_list = [DKL(self.init_x, self.init_c_list[c_idx].squeeze(), n_iter=self.train_iter, lr= self.lr, low_dim=self.low_dim,
+            self.c_model_list = [DKL(self.init_x, self.init_c_list[c_idx].squeeze(), 
+                                    n_iter=self.train_iter, lr= self.lr, low_dim=self.low_dim,
                                     spectrum_norm=spectrum_norm, exact_gp=exact_gp, pretrained_nn=self.pretrained_nn, retrain_nn=retrain_nn,
-                                    noise_constraint=self.noise_constraint, output_scale_constraint=self.output_scale_constraint) for c_idx in range(self.c_num)]
+                                    noise_constraint=self.noise_constraint, output_scale_constraint=self.output_scale_constraint, 
+                                    interpolate_prior = self.interpolate,) for c_idx in range(self.c_num)]
         else:
             self.c_model_list = c_model_list
         
@@ -372,8 +366,10 @@ class DK_BO_AE_C_M():
 
         if self.record_loss:
             assert not (pretrained_nn is None)
-            self._f_pure_dkl = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, low_dim=self.low_dim, 
-                                   pretrained_nn=None, lr=self.lr, spectrum_norm=spectrum_norm, exact_gp=exact_gp)
+            self._f_pure_dkl = DKL(self.init_x, self.init_y.squeeze(), 
+                                   n_iter=self.train_iter, low_dim=self.low_dim, 
+                                   pretrained_nn=None, lr=self.lr, spectrum_norm=spectrum_norm, exact_gp=exact_gp, 
+                                   interpolate_prior = self.interpolate,)
             # self._c_pure_dkl = DKL(self.init_x, self.init_c.squeeze(), n_iter=self.train_iter, low_dim=self.low_dim, pretrained_nn=None, lr=self.lr, spectrum_norm=spectrum_norm, exact_gp=exact_gp)
             self.f_loss_record = {"DK-AE":[], "DK":[]}
         self.cuda = torch.cuda.is_available()
@@ -398,6 +394,7 @@ class DK_BO_AE_C_M():
                     self.c_model_list[c_idx].train_model(verbose=False)
 
     def periodical_retrain(self, i, retrain_interval): 
+        self._interpolate_prior()
         # retrain for reuse
         if i % retrain_interval != 0 and self.low_dim: # allow skipping retrain in low-dim setting
             self._f_state_dict_record = self.f_model.feature_extractor.state_dict()
@@ -407,19 +404,24 @@ class DK_BO_AE_C_M():
             self._c_output_scale_record_list = [self.c_model_list[c_idx].model.covar_module.base_kernel.outputscale for c_idx in range(self.c_num)]
             self._c_length_scale_record_list = [self.c_model_list[c_idx].model.covar_module.base_kernel.base_kernel.lengthscale for c_idx in range(self.c_num)]
 
-        self.f_model = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, lr= self.lr, 
+        self.f_model = DKL(self.init_x, self.init_y.squeeze(),
+                                n_iter=self.train_iter, lr= self.lr, 
                                 low_dim=self.low_dim, pretrained_nn=self.pretrained_nn, retrain_nn=self.retrain_nn,
                                 spectrum_norm=self.spectrum_norm, exact_gp=self.exact, 
-                                noise_constraint=self.noise_constraint, output_scale_constraint=self.output_scale_constraint)
-        self.c_model_list = [DKL(self.init_x, self.init_c_list[c_idx].squeeze(), n_iter=self.train_iter, lr= self.lr, 
+                                noise_constraint=self.noise_constraint, output_scale_constraint=self.output_scale_constraint,
+                                interpolate_prior = self.interpolate,)
+        self.c_model_list = [DKL(self.init_x, self.init_c_list[c_idx].squeeze(),
+                                n_iter=self.train_iter, lr= self.lr, 
                                 low_dim=self.low_dim, pretrained_nn=self.pretrained_nn, retrain_nn=self.retrain_nn,
                                 spectrum_norm=self.spectrum_norm, exact_gp=self.exact, 
-                                noise_constraint=self.noise_constraint, output_scale_constraint=self.output_scale_constraint) for c_idx in range(self.c_num)]
+                                noise_constraint=self.noise_constraint, output_scale_constraint=self.output_scale_constraint,
+                                interpolate_prior = self.interpolate,) for c_idx in range(self.c_num)]
         
         if self.record_loss:
-            self._f_pure_dkl = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, 
+            self._f_pure_dkl = DKL(self.init_x, self.init_y.squeeze(), 
+                                   n_iter=self.train_iter, 
                                    low_dim=self.low_dim, pretrained_nn=None, lr=self.lr, spectrum_norm=self.spectrum_norm, 
-                                   exact_gp=self.exact)
+                                   exact_gp=self.exact, interpolate_prior = self.interpolate,)
         
         if i % retrain_interval != 0 and self.low_dim:
             self.f_model.feature_extractor.load_state_dict(self._f_state_dict_record, strict=False)
@@ -442,6 +444,7 @@ class DK_BO_AE_C_M():
             self.init_c_list[c_idx] = torch.cat([self.init_c_list[c_idx], self.c_tensor_list[c_idx][candidate_idx].reshape(1,-1)])
             assert self.init_x.size(0) == self.init_c_list[c_idx].size(0)
         assert self.init_x.size(0) == self.init_y.size(0)
+        self.n_init = self.init_x.size(0)
         self.observed[candidate_idx] = 1
         observed_num = self.observed.sum()
 
@@ -589,7 +592,7 @@ class DK_BO_AE_C_M():
                         # sample c
                         _c_tensor_list = []
                         with gpytorch.settings.fast_pred_samples():
-                            for _dk in self.c_model_list:
+                            for _c_idx, _dk in enumerate(self.c_model_list):
                                 _model = _dk.model
                                 _model.eval()
                                 _c_sample = _model(self.x_tensor[subsample_filter]).rsample(torch.Size([1])).reshape([-1,1])
@@ -610,6 +613,7 @@ class DK_BO_AE_C_M():
             else:
                 _  = self.f_model.next_point(self.x_tensor, acq, "love", return_idx=True)
                 _acq_f = self.f_model.acq_val.reshape([1, -1])
+
             # then generate _c_prob
             if (_acq in ['cmes-ibo']):
                 _c_prob = torch.cat([self.c_model_list[c_idx].marginal_survival(self.x_tensor[subsample_filter], self.c_threshold_list[c_idx]).unsqueeze(0) for c_idx in range(self.c_num)], dim=0)

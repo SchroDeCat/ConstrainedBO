@@ -1,3 +1,7 @@
+'''
+Abstract classes for LLNL usage.
+'''
+
 from abc import ABCMeta, abstractmethod
 import os
 import time

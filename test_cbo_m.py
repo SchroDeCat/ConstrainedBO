@@ -1,10 +1,12 @@
+'''
+Verification test of proposed method: cbo_multi/cbo
+'''
+
 import os
 import warnings
 from dataclasses import dataclass
 import torch
 
-# Constrained Max Posterior Sampling s a new sampling class, similar to MaxPosteriorSampling,
-# which implements the constrained version of Thompson Sampling described in [1].
 from botorch.test_functions import Ackley
 from botorch.utils.transforms import unnormalize
 

@@ -1,5 +1,5 @@
 """
-Full pipeline for constrained BO
+Full pipeline for constrained BO. Only pick one candidate.
 """
 
 import gpytorch
