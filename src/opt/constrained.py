@@ -548,10 +548,11 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
                                 #   'roi noise': _cbo_m.f_model.likelihood.noise.detach().item(), 'global noise': _f_model.likelihood.noise.detach().item()
                                   }
                 roi_y_min, roi_y_max = y_tensor[roi_filter].min().detach().item(), y_tensor[roi_filter].max().detach().item()
-                _iterator_info['Roi Size'] = f"{roi_filter.sum().detach().item()}"
-                _iterator_info['Roi Accuracy'] = f"{(roi_filter.logical_and(feasible_filter).sum()/roi_filter.sum()).detach().item():.2%}"
-                _iterator_info['Csi Accuracy'] = f"{(c_sci_filter.logical_and(feasible_filter).sum()/c_sci_filter.sum()).detach().item():.2%}"
-                _iterator_info['Roi Y range'] = f"{roi_y_min:.2f}, {roi_y_max:.2f}"
+                _iterator_info['ROI Size'] = f"{roi_filter.sum().detach().item()}"
+                _iterator_info['ROI Accuracy'] = f"{(roi_filter.logical_and(feasible_filter).sum()/roi_filter.sum()).detach().item():.2%}"
+                # _iterator_info['Csi Accuracy'] = f"{(c_sci_filter.logical_and(feasible_filter).sum()/c_sci_filter.sum()).detach().item():.2%}"
+                _iterator_info['Sci Accuracy'] = f"{(c_sci_filter.logical_and(feasible_filter).sum()/c_sci_filter.sum()).detach().item():.2%}"
+                _iterator_info['ROI Y range'] = f"{roi_y_min:.2f}, {roi_y_max:.2f}"
                 _iterator_info['filter_on_intersect'] = filter_on_intersect
                 iterator.set_postfix(_iterator_info)
 
