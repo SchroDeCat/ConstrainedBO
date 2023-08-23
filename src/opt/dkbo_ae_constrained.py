@@ -545,6 +545,7 @@ class DK_BO_AE_C_M():
         '''
         First Stage: Query both f and c simultaneously
         '''
+        assert self.interpolate == False
         self.regret = np.zeros(n_iter)
         if_tqdm = kwargs.get("if_tqdm", False)
         early_stop = kwargs.get("early_stop", True)
