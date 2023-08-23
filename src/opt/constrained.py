@@ -23,7 +23,7 @@ DEVICE = torch.device('cpu')
 def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidence=0.8, optimization_ratio=0.8, n_init=10, n_repeat=2, train_times=10, beta=2, regularize=False, low_dim=True, 
             spectrum_norm=False, retrain_interval=1, n_iter=40, filter_interval=1, acq="ci", ci_intersection=True, verbose=True, lr=1e-2, name="test", return_result=True, retrain_nn=True,
             plot_result=False, save_result=False, save_path=None, fix_seed=False,  pretrained=False, ae_loc=None, _minimum_pick = 10, 
-            _delta = 0.2, filter_beta=.05, exact_gp=False, constrain_noise=False, local_model=True):
+            _delta = 0.2, filter_beta=.05, exact_gp=False, constrain_noise=False, local_model=True, interpolate=True):
     
     ####### configurations
     if constrain_noise:
@@ -86,8 +86,8 @@ def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidenc
             init_y = y_tensor[:n_init]
             init_c = c_tensor[:n_init]
             # NOTE: AE is shared for f and c
-            _f_model = DKL(init_x, init_y.squeeze(), n_iter=train_times, low_dim=low_dim, lr=lr, spectrum_norm=spectrum_norm, exact_gp=exact_gp, noise_constraint=global_noise_constraint, pretrained_nn=ae)
-            _c_model = DKL(init_x, init_c.squeeze(), n_iter=train_times, low_dim=low_dim, lr=lr, spectrum_norm=spectrum_norm, exact_gp=exact_gp, noise_constraint=global_noise_constraint, pretrained_nn=ae)
+            _f_model = DKL(init_x, init_y.squeeze(), n_iter=train_times, low_dim=low_dim, lr=lr, spectrum_norm=spectrum_norm, exact_gp=exact_gp, noise_constraint=global_noise_constraint, pretrained_nn=ae, interpolate=interpolate)
+            _c_model = DKL(init_x, init_c.squeeze(), n_iter=train_times, low_dim=low_dim, lr=lr, spectrum_norm=spectrum_norm, exact_gp=exact_gp, noise_constraint=global_noise_constraint, pretrained_nn=ae, interpolate=interpolate)
             if regularize:
                 _f_model.train_model_kneighbor_collision()
                 _c_model.train_model_kneighbor_collision()
@@ -153,7 +153,7 @@ def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidenc
                 _cbo = DK_BO_AE_C(x_tensor, y_tensor, c_tensor, roi_filter, c_uci_filter, optimization_ratio, lr=lr, spectrum_norm=spectrum_norm, low_dim=low_dim,
                                     n_init=n_init,  train_iter=train_times, regularize=regularize, dynamic_weight=False,  retrain_nn=True, c_threshold=c_threshold,
                                     max=max_val, pretrained_nn=ae, verbose=verbose, init_x=init_x, init_y=init_y, init_c=init_c, exact_gp=exact_gp, noise_constraint=roi_noise_constraint,
-                                    f_model=_f_model_passed_in, c_model=_c_model_passed_in)
+                                    f_model=_f_model_passed_in, c_model=_c_model_passed_in, interpolate_prior=interpolate)
 
                 _roi_f_lcb, _roi_f_ucb = _cbo.f_model.CI(x_tensor)
                 _roi_c_lcb, _roi_c_ucb = _cbo.c_model.CI(x_tensor)
@@ -237,10 +237,10 @@ def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidenc
                 # update model and therefore the confidence intervals for filtering
                 _f_model = DKL(x_tensor[observed==1], y_tensor[observed==1].squeeze() if sum(observed) > 1 else y_tensor[observed==1],  
                             n_iter=train_times, low_dim=low_dim, pretrained_nn=ae, retrain_nn=retrain_nn, lr=lr, spectrum_norm=spectrum_norm,
-                            exact_gp=exact_gp, noise_constraint=global_noise_constraint)
+                            exact_gp=exact_gp, noise_constraint=global_noise_constraint,  interpolate=interpolate)
                 _c_model = DKL(x_tensor[observed==1], c_tensor[observed==1].squeeze() if sum(observed) > 1 else c_tensor[observed==1],  
                     n_iter=train_times, low_dim=low_dim, pretrained_nn=ae, retrain_nn=retrain_nn, lr=lr, spectrum_norm=spectrum_norm,
-                    exact_gp=exact_gp, noise_constraint=global_noise_constraint)
+                    exact_gp=exact_gp, noise_constraint=global_noise_constraint,  interpolate=interpolate)
 
                 if regularize:
                     _f_model.train_model_kneighbor_collision()
@@ -388,9 +388,9 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
             init_y = y_tensor[:n_init]
             init_c_list = [c_tensor_list[c_idx][:n_init] for c_idx in range(c_num)]
             # NOTE: AE is shared for f and c
-            _f_model = DKL(init_x, init_y.squeeze(), n_iter=train_times, low_dim=low_dim, lr=lr, spectrum_norm=spectrum_norm, exact_gp=exact_gp, noise_constraint=global_noise_constraint, pretrained_nn=ae)
+            _f_model = DKL(init_x, init_y.squeeze(), n_iter=train_times, low_dim=low_dim, lr=lr, spectrum_norm=spectrum_norm, exact_gp=exact_gp, noise_constraint=global_noise_constraint, pretrained_nn=ae, interpolate=interpolate)
             _c_model_list = [DKL(init_x, init_c_list[c_idx].squeeze(), n_iter=train_times, low_dim=low_dim, lr=lr, spectrum_norm=spectrum_norm, 
-                                exact_gp=exact_gp, noise_constraint=global_noise_constraint, pretrained_nn=ae) for c_idx in range(c_num)]
+                                exact_gp=exact_gp, noise_constraint=global_noise_constraint, pretrained_nn=ae, interpolate=interpolate) for c_idx in range(c_num)]
             if regularize:
                 _f_model.train_model_kneighbor_collision()
                 for c_idx in range(c_num):
@@ -566,11 +566,11 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
                 # update model and therefore the confidence intervals for filtering
                 _f_model = DKL(x_tensor[observed==1], y_tensor[observed==1].squeeze() if sum(observed) > 1 else y_tensor[observed==1],  
                             n_iter=train_times, low_dim=low_dim, pretrained_nn=ae, retrain_nn=retrain_nn, lr=lr, spectrum_norm=spectrum_norm,
-                            exact_gp=exact_gp, noise_constraint=global_noise_constraint)
+                            exact_gp=exact_gp, noise_constraint=global_noise_constraint, interpolate=interpolate)
                 
                 _c_model_list = [DKL(x_tensor[observed==1], c_tensor_list[c_idx][observed==1].squeeze() if sum(observed) > 1 else c_tensor_list[c_idx][observed==1], 
                                      n_iter=train_times, low_dim=low_dim, lr=lr, spectrum_norm=spectrum_norm, 
-                                     exact_gp=exact_gp, noise_constraint=global_noise_constraint, pretrained_nn=ae) for c_idx in range(c_num)]
+                                     exact_gp=exact_gp, noise_constraint=global_noise_constraint, pretrained_nn=ae, interpolate=interpolate) for c_idx in range(c_num)]
 
                 if regularize:
                     _f_model.train_model_kneighbor_collision()

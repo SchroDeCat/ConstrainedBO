@@ -54,6 +54,8 @@ class DK_BO_AE_C():
         self.maximum = torch.max(self.y_tenso[feasible_filter]) if max==None else max
         self.max_regret = self.maximum - torch.min(self.y_tensor)
 
+        self.interpolate = kwargs.get('interpolate_prior', False)
+
         self.init_x = kwargs.get("init_x", self.x_tensor[:n_init])        
         self.init_y = kwargs.get("init_y", self.y_tensor[:n_init])
         self.init_c = kwargs.get("init_c", self.c_tensor[:n_init])
@@ -74,14 +76,14 @@ class DK_BO_AE_C():
         if f_model is None:
             self.f_model = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, lr= self.lr, low_dim=self.low_dim, 
                             pretrained_nn=self.pretrained_nn, retrain_nn=retrain_nn, spectrum_norm=spectrum_norm, exact_gp=exact_gp, 
-                            noise_constraint = self.noise_constraint, output_scale_constraint=self.output_scale_constraint)
+                            noise_constraint = self.noise_constraint, output_scale_constraint=self.output_scale_constraint, interpolate_prior = self.interpolate,)
         else:
             self.f_model = f_model
         
         if c_model is None:
             self.c_model = DKL(self.init_x, self.init_c.squeeze(), n_iter=self.train_iter, lr= self.lr, low_dim=self.low_dim, 
                             pretrained_nn=self.pretrained_nn, retrain_nn=retrain_nn, spectrum_norm=spectrum_norm, exact_gp=exact_gp, 
-                            noise_constraint = self.noise_constraint, output_scale_constraint=self.output_scale_constraint)
+                            noise_constraint = self.noise_constraint, output_scale_constraint=self.output_scale_constraint, interpolate_prior = self.interpolate,)
         else:
             self.c_model = c_model
         
@@ -89,7 +91,7 @@ class DK_BO_AE_C():
 
         if self.record_loss:
             assert not (pretrained_nn is None)
-            self._f_pure_dkl = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, low_dim=self.low_dim, pretrained_nn=None, lr=self.lr, spectrum_norm=spectrum_norm, exact_gp=exact_gp)
+            self._f_pure_dkl = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, low_dim=self.low_dim, pretrained_nn=None, lr=self.lr, spectrum_norm=spectrum_norm, exact_gp=exact_gp, interpolate_prior = self.interpolate,)
             # self._c_pure_dkl = DKL(self.init_x, self.init_c.squeeze(), n_iter=self.train_iter, low_dim=self.low_dim, pretrained_nn=None, lr=self.lr, spectrum_norm=spectrum_norm, exact_gp=exact_gp)
             self.f_loss_record = {"DK-AE":[], "DK":[]}
         self.cuda = torch.cuda.is_available()
@@ -181,12 +183,12 @@ class DK_BO_AE_C():
                 self._c_length_scale_record = self.c_model.model.covar_module.base_kernel.base_kernel.lengthscale
 
             self.f_model = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, lr= self.lr, low_dim=self.low_dim, pretrained_nn=self.pretrained_nn, retrain_nn=self.retrain_nn,
-                                 spectrum_norm=self.spectrum_norm, exact_gp=self.exact, noise_constraint=self.noise_constraint, output_scale_constraint=self.output_scale_constraint)
+                                 spectrum_norm=self.spectrum_norm, exact_gp=self.exact, noise_constraint=self.noise_constraint, output_scale_constraint=self.output_scale_constraint, interpolate_prior = self.interpolate,)
             self.c_model = DKL(self.init_x, self.init_c.squeeze(), n_iter=self.train_iter, lr= self.lr, low_dim=self.low_dim, pretrained_nn=self.pretrained_nn, retrain_nn=self.retrain_nn,
-                                 spectrum_norm=self.spectrum_norm, exact_gp=self.exact, noise_constraint=self.noise_constraint, output_scale_constraint=self.output_scale_constraint)
+                                 spectrum_norm=self.spectrum_norm, exact_gp=self.exact, noise_constraint=self.noise_constraint, output_scale_constraint=self.output_scale_constraint, interpolate_prior = self.interpolate,)
             
             if self.record_loss:
-                self._f_pure_dkl = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, low_dim=self.low_dim, pretrained_nn=None, lr=self.lr, spectrum_norm=self.spectrum_norm, exact_gp=self.exact)
+                self._f_pure_dkl = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, low_dim=self.low_dim, pretrained_nn=None, lr=self.lr, spectrum_norm=self.spectrum_norm, exact_gp=self.exact, interpolate_prior = self.interpolate,)
             
             if i % retrain_interval != 0 and self.low_dim:
                 self.f_model.feature_extractor.load_state_dict(self._f_state_dict_record, strict=False)
@@ -261,7 +263,7 @@ class DK_BO_AE_C():
                 self._c_length_scale_record = self.c_model.model.covar_module.base_kernel.base_kernel.lengthscale
 
             self.c_model = DKL(self.init_x, self.init_c.squeeze(), n_iter=self.train_iter, lr= self.lr, low_dim=self.low_dim, pretrained_nn=self.pretrained_nn, retrain_nn=self.retrain_nn,
-                                 spectrum_norm=self.spectrum_norm, exact_gp=self.exact, noise_constraint=self.noise_constraint, output_scale_constraint=self.output_scale_constraint)
+                                 spectrum_norm=self.spectrum_norm, exact_gp=self.exact, noise_constraint=self.noise_constraint, output_scale_constraint=self.output_scale_constraint, interpolate_prior = self.interpolate,)
                
             if i % retrain_interval != 0 and self.low_dim:
                 self.c_model.feature_extractor.load_state_dict(self._c_state_dict_record, strict=False)
@@ -370,7 +372,6 @@ class DK_BO_AE_C_M():
                                    n_iter=self.train_iter, low_dim=self.low_dim, 
                                    pretrained_nn=None, lr=self.lr, spectrum_norm=spectrum_norm, exact_gp=exact_gp, 
                                    interpolate_prior = self.interpolate,)
-            # self._c_pure_dkl = DKL(self.init_x, self.init_c.squeeze(), n_iter=self.train_iter, low_dim=self.low_dim, pretrained_nn=None, lr=self.lr, spectrum_norm=spectrum_norm, exact_gp=exact_gp)
             self.f_loss_record = {"DK-AE":[], "DK":[]}
         self.cuda = torch.cuda.is_available()
 

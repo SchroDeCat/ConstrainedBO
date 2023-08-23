@@ -168,7 +168,6 @@ def pure_dkbo(x_tensor, y_tensor, name, n_repeat=2, lr=1e-2, n_init=10, n_iter=4
     if return_result:
         return reg_record
 
-
 def ol_filter_dkbo(x_tensor, y_tensor, n_init=10, n_repeat=2, train_times=10, beta=2, regularize=True, low_dim=True, spectrum_norm=False, retrain_interval=1,
                    n_iter=40, filter_interval=1, acq="ts", ci_intersection=True, verbose=True, lr=1e-2, name="test", return_result=True, retrain_nn=True,
                    plot_result=False, save_result=False, save_path=None, fix_seed=False,  pretrained=False, ae_loc=None, study_partition=STUDY_PARTITION, _minimum_pick = 10, 
@@ -732,7 +731,6 @@ def ol_partition_kmeansY_dkbo(x_tensor, y_tensor, n_init=10, n_repeat=2, num_GP=
 
     if return_result:
         return reg_record
-
 
 def truvar(x_tensor, y_tensor, n_init=10, n_repeat=2, train_times=10, beta=2, low_dim=True, spectrum_norm=False, 
                    n_iter=40, filter_interval=1, ci_intersection=True, verbose=True, lr=1e-2, name="test", return_result=True, retrain_nn=True,

@@ -20,23 +20,12 @@ from typing import Any, List, NoReturn, Optional, Union
 from .exact_gp import ExactGPRegressionModel
 from .module import LargeFeatureExtractor, GPRegressionModel
 from .sgld import SGLD
-from sparsemax import Sparsemax
-from scipy.stats import ttest_ind
 from scipy.stats import norm
-from sklearn.cluster import MiniBatchKMeans, KMeans
-from sklearn.metrics.pairwise import pairwise_distances_argmin
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
-from sklearn.kernel_ridge import KernelRidge
-from sklearn.metrics import mean_absolute_error
-from sklearn.preprocessing import StandardScaler, RobustScaler
-from sklearn.cluster import KMeans
-from sklearn.decomposition import PCA
-from sklearn.manifold import TSNE
 from sklearn.neighbors import NearestNeighbors
 
 from botorch.posteriors.gpytorch import GPyTorchPosterior
 from botorch.models.utils import gpt_posterior_settings
+from scipy.interpolate import RBFInterpolator
 
 
 
@@ -73,6 +62,8 @@ class DKL():
         # self.cuda = False
         # split the dataset
         total_size = train_y.size(0)
+        self.interpolate = kwargs.get('interpolate_prior', False)
+
         if test_split:
             test_ratio = 0.2
             test_size = int(total_size * test_ratio)
