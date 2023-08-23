@@ -92,7 +92,6 @@ class DK_BO_AE_C():
         if self.record_loss:
             assert not (pretrained_nn is None)
             self._f_pure_dkl = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, low_dim=self.low_dim, pretrained_nn=None, lr=self.lr, spectrum_norm=spectrum_norm, exact_gp=exact_gp, interpolate_prior = self.interpolate,)
-            # self._c_pure_dkl = DKL(self.init_x, self.init_c.squeeze(), n_iter=self.train_iter, low_dim=self.low_dim, pretrained_nn=None, lr=self.lr, spectrum_norm=spectrum_norm, exact_gp=exact_gp)
             self.f_loss_record = {"DK-AE":[], "DK":[]}
         self.cuda = torch.cuda.is_available()
 
@@ -284,7 +283,6 @@ class DK_BO_AE_C():
             if if_tqdm:
                 iterator.set_postfix({"regret":self.regret[i], "Internal_beta": beta})
 
-
 class DK_BO_AE_C_M():
     """
     Initialize the network with auto-encoder for constrained setting, support list of constraints
@@ -395,7 +393,6 @@ class DK_BO_AE_C_M():
                     self.c_model_list[c_idx].train_model(verbose=False)
 
     def periodical_retrain(self, i, retrain_interval): 
-        self._interpolate_prior()
         # retrain for reuse
         if i % retrain_interval != 0 and self.low_dim: # allow skipping retrain in low-dim setting
             self._f_state_dict_record = self.f_model.feature_extractor.state_dict()

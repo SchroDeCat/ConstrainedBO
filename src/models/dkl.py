@@ -1,21 +1,12 @@
 import gpytorch
-import os
-import random
 import torch
 import tqdm
-import time
-import matplotlib
-import math
-import warnings
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-import datetime
-import itertools
+
 
 # from src.utils import beta_CI
-
-from typing import Any, List, NoReturn, Optional, Union
 
 from .exact_gp import ExactGPRegressionModel
 from .module import LargeFeatureExtractor, GPRegressionModel
@@ -23,8 +14,6 @@ from .sgld import SGLD
 from scipy.stats import norm
 from sklearn.neighbors import NearestNeighbors
 
-from botorch.posteriors.gpytorch import GPyTorchPosterior
-from botorch.models.utils import gpt_posterior_settings
 from scipy.interpolate import RBFInterpolator
 
 
@@ -62,7 +51,6 @@ class DKL():
         # self.cuda = False
         # split the dataset
         total_size = train_y.size(0)
-        self.interpolate = kwargs.get('interpolate_prior', False)
 
         if test_split:
             test_ratio = 0.2
@@ -77,6 +65,14 @@ class DKL():
             self._y = self.test_y.clone()
             self._x_train = self.train_x.clone()
             self._y_train = self.train_y.clone()
+
+        # prior with interpolator
+        self.interpolate = kwargs.get('interpolate_prior', False)
+        self.interpolator = RBFInterpolator(self.train_x.clone(), self.train_y.clone(), smoothing=1e-1, kernel='cubic')
+        if self.interpolate:
+            self._train_y = self.train_y - self.interpolator(self.train_x)
+        else:
+            self._train_y = self.train_y.clone()
 
 
         def add_spectrum_norm(module, normalize=spectrum_norm):
@@ -95,7 +91,7 @@ class DKL():
 
 
         self.GPRegressionModel = GPRegressionModel if not self.exact else ExactGPRegressionModel
-        self.model = self.GPRegressionModel(self.train_x, self.train_y, self.likelihood, self.feature_extractor, 
+        self.model = self.GPRegressionModel(self.train_x, self._train_y, self.likelihood, self.feature_extractor, 
                                             low_dim=self.low_dim, output_scale_constraint=self.output_scale_constraint)
         # if self.low_dim:
         #     self.model.covar_module.base_kernel.outputscale = self.output_scale
@@ -104,8 +100,27 @@ class DKL():
             self.model = self.model.cuda()
             self.likelihood = self.likelihood.cuda()
             self.train_x = self.train_x.cuda()
-            self.train_y = self.train_y.cuda()
+            self._train_y = self._train_y.cuda()
     
+    def interpolation_calibrate(self, test_x, target_value=None, cuda=False):
+        '''
+        Calibrate the target value with interpolation on test_x if needed
+        '''
+        test_x = test_x.cpu()
+        if self.interpolate:
+            _interpolation = self.interpolate(test_x.cpu())
+            if cuda:
+                _interpolation = _interpolation.cuda()
+        else:
+            _interpolation = 0
+        
+        if target_value is None:
+            return _interpolation
+        else:
+            return target_value + _interpolation
+
+
+
     # def train_model(self, loss_type="mse", verbose=False, **kwargs):
     def train_model(self, loss_type="nll", verbose=False, **kwargs):
         # Find optimal model hyperparameters
@@ -155,7 +170,7 @@ class DKL():
                 self.output = self.model(self.train_x)
                 # Calc loss and backprop derivatives
                 # print("loss", self.output.mean, self.train_y, self.loss_func)
-                self.loss = self.loss_func(self.output, self.train_y)
+                self.loss = self.loss_func(self.output, self._train_y)
                 # print('backward')
                 self.loss.backward()
                 self.optimizer.step()
@@ -184,7 +199,10 @@ class DKL():
             test_x, test_y = test_x.cuda(), test_y.cuda()
         with torch.no_grad(), gpytorch.settings.use_toeplitz(False), gpytorch.settings.fast_pred_var():
             preds = self.model(test_x)
-        MAE = torch.mean(torch.abs(preds.mean - test_y))
+        if self.interpolate:
+            MAE = torch.mean(torch.abs(preds.mean.cpu() + self.interpolator(test_x.cpu()) - test_y.cpu()))
+        else:
+            MAE = torch.mean(torch.abs(preds.mean - test_y))
         if self.cuda:
             MAE = MAE.cpu()
 
@@ -211,7 +229,10 @@ class DKL():
         self.likelihood.train()
 
         if return_pred:
-            return preds.mean.cpu()
+            if self.interpolate:
+                return preds.mean.cpu() + self.interpolator(test_x.cpu())
+            else:
+                return preds.mean.cpu()
 
     def latent_space(self, input_x):
         if self.exact:
@@ -273,9 +294,9 @@ class DKL():
                 self.NNeighbors.fit(latent_variable.detach().numpy())
                 tmp_penalty = torch.zeros(self.latent_variable.size(0)).cuda() if self.cuda else torch.zeros(self.latent_variable.size(0))
                 # tmp_weights = torch.zeros(self.latent_variable.size(0)).cuda() if self.cuda else torch.zeros(self.latent_variable.size(0))
-                tmp_weights = self.train_y.detach()
+                tmp_weights = self._train_y.detach()
                 # for label, var in zip(self.train_y, self.latent_variable):
-                for var_id, label in enumerate(self.train_y):
+                for var_id, label in enumerate(self._train_y):
                     var_val = self.latent_variable[var_id].cpu() if self.cuda else self.latent_variable[var_id]
                     # tmp_weights[var_id] = label.detach().cpu().numpy() if self.cuda else label.detach().numpy()
                     tmp_weights[var_id] = label.detach()
@@ -284,8 +305,8 @@ class DKL():
                     for nei_dist, nei_idx  in zip(neighbors_dists, neighbors_indices):
                         # z_dist = torch.norm(torch.abs(var   - self.latent_variable[nei_idx])) # will cause double backward
                         z_dist = np.linalg.norm(nei_dist)
-                        y_dist = torch.norm(torch.abs(label - self.train_y[nei_idx])) * Lambda
-                        assert torch.sum(self.train_y.cpu() - self._y)== 0
+                        y_dist = torch.norm(torch.abs(label - self._train_y[nei_idx])) * Lambda
+                        assert torch.sum(self._train_y.cpu() - self._y)== 0
                         tmp = torch.maximum(zero_var,  y_dist - z_dist) ** 2
                         tmp_penalty[var_id] = tmp.reshape([1,1]).cuda() if self.cuda else tmp.reshape([1,1])   
                         # self.penalty += tmp
@@ -299,7 +320,7 @@ class DKL():
 
                 # Calc loss and backprop derivatives
                 # print(self.output.mean.size(), self.train_y.size())
-                nll = -self.mll(self.output, self.train_y)
+                nll = -self.mll(self.output, self._train_y)
                 penalty = self.penalty
                 if verbose:
                     print(f"nll {nll}, penalty {penalty}")
@@ -352,6 +373,13 @@ class DKL():
         if self.cuda:
           _test_x = _test_x.cuda()
 
+        # if self.interpolate:
+        #     _interpolation = self.interpolate(_test_x.cpu())
+        #     if self.cuda:
+        #         _interpolation = _interpolation.cuda()
+        _interpolation = self.interpolation_calibrate(_test_x, target_value=None, cuda=self.cuda)
+
+
         if acq.lower() in ["ts", 'qei']:
             '''
             Either Thompson Sampling or Monte-Carlo EI
@@ -376,6 +404,9 @@ class DKL():
             else:
                 raise NotImplementedError(f"sampling method {method} not implemented")
             
+            if self.interpolate:
+                samples = samples + _interpolation
+            
             if acq.lower() == 'ts':
                 self.acq_val = samples.T.squeeze()
             elif acq.lower() == 'qei':
@@ -390,6 +421,10 @@ class DKL():
                 observed_pred = self.likelihood(self.model(_test_x))
                 lower, upper = observed_pred.confidence_region()
                 lower, upper = beta_CI(lower, upper, beta)
+            
+            if self.interpolate:
+                lower = lower + _interpolation
+                upper = upper + _interpolation
 
             if acq.lower() == 'ucb':
                 self.acq_val = upper
@@ -400,11 +435,10 @@ class DKL():
             elif acq.lower() == 'lcb':
                 self.acq_val = -lower            
         elif acq.lower() == 'truvar':
-            # print("enter next point truvar")
             with torch.no_grad(), gpytorch.settings.fast_pred_var():
                 observed_pred = self.likelihood(self.model(_test_x))
                 lower, upper = observed_pred.confidence_region()
-                lower, upper = beta_CI(lower, upper, beta)
+                lower, upper = beta_CI(lower, upper, beta)         
                 pred_mean = (lower + upper) / 2
 
             self.acq_val = torch.zeros(_test_x.size(0))
@@ -423,7 +457,10 @@ class DKL():
             # Pure exploitation with predicted mean as the acquisition function.
             with torch.no_grad(), gpytorch.settings.fast_pred_var():
                 observed_pred = self.likelihood(self.model(_test_x))
-                self.acq_val = observed_pred.mean
+                if self.interpolation:
+                    self.acq_val = observed_pred.mean + _interpolation
+                else:
+                    self.acq_val = observed_pred.mean
                 # print(self.acq_val)
         else:
             raise NotImplementedError(f"acq {acq} not implemented")
@@ -461,6 +498,16 @@ class DKL():
             observed_pred = self.likelihood(self.model(test_x))
             lower, upper = observed_pred.confidence_region()
         
+        # if self.interpolate:
+        #     _interpolation = self.interpolate(test_x.cpu())
+        #     if self.cuda:
+        #         _interpolation = _interpolation.cuda()
+        _interpolation = self.interpolation_calibrate(test_x, target_value=None, cuda=self.cuda)
+
+        if self.interpolate:
+            lower = lower + _interpolation
+            upper = upper + _interpolation 
+        
         return lower, upper
 
     def marginal_survival(self, test_x, threshold:int=0):
@@ -471,16 +518,23 @@ class DKL():
         self.model.eval()
         mvn = self.model(test_x)
         mean, stddev = mvn.mean, mvn.stddev
+        # if self.interpolate:
+            # _interpolation = self.interpolate(test_x)
+            # mean = mean + _interpolation
+        mean = self.interpolation_calibrate(test_x, target_value=mean, cuda=self.cuda)
         prob = torch.tensor([1-norm.cdf(x=threshold, loc=loc.detach().item(), scale=scale.detach().item()) for loc, scale in zip(mean, stddev)])
         return prob
 
     @classmethod
-    def mvn_survival(self, mvn, threshold:int=0):
+    def mvn_survival(self, mvn, threshold:int=0, interpolation:torch.tensor=None):
         '''
         Marginal probability on test x that f(x) > threshold
         Return: p_tensor.size == test_x.size
         '''
         mean, stddev = mvn.mean, mvn.stddev
+        if not (interpolation is None):
+            mean = mean + interpolation
+
         prob = torch.tensor([1-norm.cdf(x=threshold, loc=loc.detach().item(), scale=scale.detach().item()) for loc, scale in zip(mean, stddev)])
         return prob
 
@@ -500,12 +554,17 @@ class DKL():
         if self.cuda:
           test_x = test_x.cuda()
 
+        _interpolation = self.interpolation_calibrate(test_x, target_value=None, cuda=self.cuda)
+
         if acq.lower() in ["ucb", 'ci', 'lcb', 'ucb-debug']:
             with torch.no_grad(), gpytorch.settings.fast_pred_var():
                 observed_pred = self.likelihood(self.model(test_x))
                 lower, upper = observed_pred.confidence_region()
                 # intersection
                 lower, upper = beta_CI(lower, upper, beta)
+                if self.interpolate:
+                    lower = lower + _interpolation
+                    upper = upper + _interpolation
                 assert lower.shape == max_test_x_lcb.shape and upper.shape == min_test_x_ucb.shape
                 lower = torch.max(lower.to("cpu"), max_test_x_lcb.to("cpu"))
                 upper = torch.min(upper.to("cpu"), min_test_x_ucb.to("cpu"))
