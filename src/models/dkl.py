@@ -67,10 +67,14 @@ class DKL():
             self._y_train = self.train_y.clone()
 
         # prior with interpolator
-        self.interpolate = kwargs.get('interpolate_prior', False)
-        self.interpolator = RBFInterpolator(self.train_x.clone(), self.train_y.clone(), smoothing=1e-1, kernel='cubic')
+        self.interpolate = kwargs.get('interpolate', False)
+        interpolate_y = self.train_x.clone()
+        interpolate_d = self.train_y.clone().reshape([self.train_x.size(0)])
+        _kernel = 'cubic' if self.train_x.size(0) > self.train_x.size(1) else 'linear'
+        self.interpolator = RBFInterpolator(y=interpolate_y, d=interpolate_d, smoothing=1e-1, kernel=_kernel)
         if self.interpolate:
-            self._train_y = self.train_y - self.interpolator(self.train_x)
+            self._train_y = self.train_y - self.interpolator(self.train_x).squeeze()
+            self._train_y = self._train_y.float()
         else:
             self._train_y = self.train_y.clone()
 
@@ -108,7 +112,7 @@ class DKL():
         '''
         test_x = test_x.cpu()
         if self.interpolate:
-            _interpolation = self.interpolate(test_x.cpu())
+            _interpolation = self.interpolator(test_x.cpu())
             if cuda:
                 _interpolation = _interpolation.cuda()
         else:

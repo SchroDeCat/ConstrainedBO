@@ -44,8 +44,11 @@ n_pts = 20000
 def c_fun(x):  # Equivalent to enforcing that x[0] >= 0
     return x[0]
 
+# interpolate=True
+interpolate=False
 n_init = 10
 n_iter = 100
+# n_iter=20
 train_times = 5
 n_repeat = 2
 max_cholesky_size = float("inf")  # Always use Cholesky
@@ -64,7 +67,7 @@ regret = cbo(x_tensor, y_tensor, c_tensor, constraint_threshold=0, constraint_co
             spectrum_norm=False, retrain_interval=1, n_iter=n_iter, filter_interval=1, acq="ci", 
             ci_intersection=True, verbose=True, lr=1e-4, name="test", return_result=True, retrain_nn=True,
             plot_result=True, save_result=True, save_path='./res', fix_seed=True,  pretrained=False, ae_loc=None, 
-            _minimum_pick = 10, _delta = 0.2, beta=0, filter_beta=0.5, exact_gp=False, constrain_noise=False, local_model=False)
+            _minimum_pick = 10, _delta = 0.2, beta=0, filter_beta=0.5, exact_gp=False, constrain_noise=False, local_model=False, interpolate=interpolate)
 
 # exact GP
 regret = cbo(x_tensor, y_tensor, c_tensor, constraint_threshold=0, constraint_confidence=.5,
@@ -72,6 +75,6 @@ regret = cbo(x_tensor, y_tensor, c_tensor, constraint_threshold=0, constraint_co
             spectrum_norm=False, retrain_interval=1, n_iter=n_iter, filter_interval=1, acq="ci", 
             ci_intersection=True, verbose=True, lr=1e-4, name="test", return_result=True, retrain_nn=True,
             plot_result=True, save_result=True, save_path='./res', fix_seed=True,  pretrained=False, ae_loc=None, 
-            _minimum_pick = 10, _delta = 0.2, beta=0, filter_beta=0.5, exact_gp=True, constrain_noise=False, local_model=False)
+            _minimum_pick = 10, _delta = 0.2, beta=0, filter_beta=0.5, exact_gp=True, constrain_noise=False, local_model=False, interpolate=interpolate)
 
 print(f"With constraints, the minimum regret we found is: {regret.min(axis=-1)}")

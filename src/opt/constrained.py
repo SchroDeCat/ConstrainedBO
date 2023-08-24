@@ -261,6 +261,8 @@ def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidenc
     beta = 0 if default_beta else beta # for record
 
     ### Export results
+    _file_prefix = f"Figure_{name}{'-InterP' if interpolate else ''}{'-Exact' if exact_gp else ''}-B{beta:.2f}-FB{filter_beta:.2f}-RI{retrain_interval}"
+    _file_postfix = f"-{acq}-R{n_repeat}-P{1}-T{n_iter}_I{filter_interval}_L{int(-np.log10(lr))}-TI{train_times}{'-sec' if ci_intersection else ''}"
     if plot_result:
         # regret
         fig = plt.figure()
@@ -268,7 +270,7 @@ def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidenc
         plt.ylabel("regret")
         plt.xlabel("Iteration")
         plt.title(f'simple regret for {name}')
-        _path = f"{save_path}/Filter{'-Exact' if exact_gp else ''}-{name}-B{beta}-FB{filter_beta}-{acq}-R{n_repeat}-P{1}-T{n_iter}_I{filter_interval}_L{int(-np.log10(lr))}-TI{train_times}-RI{retrain_interval}{'-sec' if ci_intersection else ''}"
+        _path = f"{save_path}/Regret-{_file_prefix}{_file_postfix}"
         plt.savefig(f"{_path}.png")
         # filter ratio
         fig = plt.figure()
@@ -276,7 +278,7 @@ def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidenc
         plt.ylabel("Ratio")
         plt.xlabel("Iteration")
         plt.title(f'ROI Ratio for {name}')
-        _path = f"{save_path}/Filter{'-Exact' if exact_gp else ''}-{name}-ratio-B{beta}-FB{filter_beta}-{acq}-R{n_repeat}-P{1}-T{n_iter}_I{filter_interval}_L{int(-np.log10(lr))}-TI{train_times}-RI{retrain_interval}{'-sec' if ci_intersection else ''}"
+        _path = f"{save_path}/Ratio-{_file_prefix}{_file_postfix}"
         plt.savefig(f"{_path}.png")
         # interval
         fig = plt.figure()
@@ -288,20 +290,20 @@ def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidenc
         plt.xlabel("Iteration")
         plt.legend()
         plt.title(f'Interval for {name}')
-        _path = f"{save_path}/Filter{'-Exact' if exact_gp else ''}-{name}-interval-B{beta}-{acq}-R{n_repeat}-P{1}-T{n_iter}_I{filter_interval}_L{int(-np.log10(lr))}-TI{train_times}-RI{retrain_interval}{'-sec' if ci_intersection else ''}"
+        _path = f"{save_path}/CI-{_file_prefix}{_file_postfix}"
         plt.savefig(f"{_path}.png")
         plt.close()
         # plt.show()
 
     if save_result:
         assert not (save_path is None)
-        save_res(save_path=save_path, name=f"{name}{'-Exact' if exact_gp else ''}-B{beta}-FB{filter_beta}-RI{retrain_interval}", res=reg_record, n_repeat=n_repeat, num_GP=2, n_iter=n_iter, train_iter=train_times,
+        save_res(save_path=save_path, name=f"Regret-{_file_prefix}", res=reg_record, n_repeat=n_repeat, num_GP=2, n_iter=n_iter, train_iter=train_times,
                 init_strategy='none', cluster_interval=filter_interval, acq=acq, lr=lr, ucb_strategy="exact", ci_intersection=ci_intersection, verbose=verbose,)
         
-        save_res(save_path=save_path, name=f"{name}{'-Exact' if exact_gp else ''}-B{beta}-FB{filter_beta}-RI{retrain_interval}-ratio", res=ratio_record, n_repeat=n_repeat, num_GP=2, n_iter=n_iter, train_iter=train_times,
+        save_res(save_path=save_path, name=f"Ratio-{_file_prefix}", res=ratio_record, n_repeat=n_repeat, num_GP=2, n_iter=n_iter, train_iter=train_times,
                 init_strategy='none', cluster_interval=filter_interval, acq=acq, lr=lr, ucb_strategy="exact", ci_intersection=ci_intersection, verbose=verbose,)
 
-        save_res(save_path=save_path, name=f"{name}{'-Exact' if exact_gp else ''}-B{beta}-FB{filter_beta}-RI{retrain_interval}-interval", res=max_LUCB_interval_record, n_repeat=n_repeat, num_GP=2, n_iter=n_iter, train_iter=train_times,
+        save_res(save_path=save_path, name=f"CI", res=max_LUCB_interval_record, n_repeat=n_repeat, num_GP=2, n_iter=n_iter, train_iter=train_times,
                 init_strategy='none', cluster_interval=filter_interval, acq=acq, lr=lr, ucb_strategy="exact", ci_intersection=ci_intersection, verbose=verbose,)
 
 
@@ -591,7 +593,7 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
     beta = 0 if default_beta else beta # for record
 
     ### Export results
-    _file_prefix = f"Figure_{name}{'-Exact' if exact_gp else ''}-B{beta:.2f}-FB{filter_beta:.2f}-RI{retrain_interval}"
+    _file_prefix = f"Figure_{name}{'-InterP' if interpolate else ''}{'-Exact' if exact_gp else ''}-B{beta:.2f}-FB{filter_beta:.2f}-RI{retrain_interval}"
     _file_postfix = f"-{acq}-R{n_repeat}-P{1}-T{n_iter}_I{filter_interval}_L{int(-np.log10(lr))}-TI{train_times}{'-sec' if ci_intersection else ''}"
     if plot_result:
         # regret
@@ -743,7 +745,7 @@ def baseline_cbo_m(x_tensor, y_tensor, c_tensor_list,
     
 
     ### Export results
-    _file_prefix = f"Figure_{name}{'-Exact' if exact_gp else ''}-RI{retrain_interval}"
+    _file_prefix = f"Figure_{name}{'-InterP' if interpolate else ''}{'-Exact' if exact_gp else ''}-RI{retrain_interval}"
     _file_postfix = f"-{acq}-R{n_repeat}-P{1}-T{n_iter}_I{filter_interval}_L{int(-np.log10(lr))}-TI{train_times}"
     if plot_result:
         # regret
@@ -773,7 +775,7 @@ def baseline_scbo(x_tensor, y_func, c_func_list,
                     verbose=True, lr=1e-2,
                     name="test", return_result=True, retrain_nn=True,
                     plot_result=False, save_result=False, save_path=None, fix_seed=False,  
-                    exact_gp=False, constrain_noise=False):
+                    exact_gp=False, constrain_noise=False, interpolate=False):
     '''
     https://botorch.org/tutorials/scalable_constrained_bo
     '''
@@ -814,7 +816,7 @@ def baseline_scbo(x_tensor, y_func, c_func_list,
     
 
     ### Export results
-    _file_prefix = f"Figure_{name}{'-Exact' if exact_gp else ''}-RI{retrain_interval}"
+    _file_prefix = f"Figure_{name}{'-InterP' if interpolate else ''}{'-Exact' if exact_gp else ''}-RI{retrain_interval}"
     _file_postfix = f"-{acq}-R{n_repeat}-P{1}-T{n_iter}_I{filter_interval}_L{int(-np.log10(lr))}-TI{train_times}"
     if plot_result:
         # regret

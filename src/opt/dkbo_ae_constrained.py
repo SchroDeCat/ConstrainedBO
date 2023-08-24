@@ -76,14 +76,14 @@ class DK_BO_AE_C():
         if f_model is None:
             self.f_model = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, lr= self.lr, low_dim=self.low_dim, 
                             pretrained_nn=self.pretrained_nn, retrain_nn=retrain_nn, spectrum_norm=spectrum_norm, exact_gp=exact_gp, 
-                            noise_constraint = self.noise_constraint, output_scale_constraint=self.output_scale_constraint, interpolate_prior = self.interpolate,)
+                            noise_constraint = self.noise_constraint, output_scale_constraint=self.output_scale_constraint, interpolate = self.interpolate,)
         else:
             self.f_model = f_model
         
         if c_model is None:
             self.c_model = DKL(self.init_x, self.init_c.squeeze(), n_iter=self.train_iter, lr= self.lr, low_dim=self.low_dim, 
                             pretrained_nn=self.pretrained_nn, retrain_nn=retrain_nn, spectrum_norm=spectrum_norm, exact_gp=exact_gp, 
-                            noise_constraint = self.noise_constraint, output_scale_constraint=self.output_scale_constraint, interpolate_prior = self.interpolate,)
+                            noise_constraint = self.noise_constraint, output_scale_constraint=self.output_scale_constraint, interpolate = self.interpolate,)
         else:
             self.c_model = c_model
         
@@ -91,7 +91,7 @@ class DK_BO_AE_C():
 
         if self.record_loss:
             assert not (pretrained_nn is None)
-            self._f_pure_dkl = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, low_dim=self.low_dim, pretrained_nn=None, lr=self.lr, spectrum_norm=spectrum_norm, exact_gp=exact_gp, interpolate_prior = self.interpolate,)
+            self._f_pure_dkl = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, low_dim=self.low_dim, pretrained_nn=None, lr=self.lr, spectrum_norm=spectrum_norm, exact_gp=exact_gp, interpolate = self.interpolate,)
             self.f_loss_record = {"DK-AE":[], "DK":[]}
         self.cuda = torch.cuda.is_available()
 
@@ -182,12 +182,12 @@ class DK_BO_AE_C():
                 self._c_length_scale_record = self.c_model.model.covar_module.base_kernel.base_kernel.lengthscale
 
             self.f_model = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, lr= self.lr, low_dim=self.low_dim, pretrained_nn=self.pretrained_nn, retrain_nn=self.retrain_nn,
-                                 spectrum_norm=self.spectrum_norm, exact_gp=self.exact, noise_constraint=self.noise_constraint, output_scale_constraint=self.output_scale_constraint, interpolate_prior = self.interpolate,)
+                                 spectrum_norm=self.spectrum_norm, exact_gp=self.exact, noise_constraint=self.noise_constraint, output_scale_constraint=self.output_scale_constraint, interpolate = self.interpolate,)
             self.c_model = DKL(self.init_x, self.init_c.squeeze(), n_iter=self.train_iter, lr= self.lr, low_dim=self.low_dim, pretrained_nn=self.pretrained_nn, retrain_nn=self.retrain_nn,
-                                 spectrum_norm=self.spectrum_norm, exact_gp=self.exact, noise_constraint=self.noise_constraint, output_scale_constraint=self.output_scale_constraint, interpolate_prior = self.interpolate,)
+                                 spectrum_norm=self.spectrum_norm, exact_gp=self.exact, noise_constraint=self.noise_constraint, output_scale_constraint=self.output_scale_constraint, interpolate = self.interpolate,)
             
             if self.record_loss:
-                self._f_pure_dkl = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, low_dim=self.low_dim, pretrained_nn=None, lr=self.lr, spectrum_norm=self.spectrum_norm, exact_gp=self.exact, interpolate_prior = self.interpolate,)
+                self._f_pure_dkl = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, low_dim=self.low_dim, pretrained_nn=None, lr=self.lr, spectrum_norm=self.spectrum_norm, exact_gp=self.exact, interpolate = self.interpolate,)
             
             if i % retrain_interval != 0 and self.low_dim:
                 self.f_model.feature_extractor.load_state_dict(self._f_state_dict_record, strict=False)
@@ -262,7 +262,7 @@ class DK_BO_AE_C():
                 self._c_length_scale_record = self.c_model.model.covar_module.base_kernel.base_kernel.lengthscale
 
             self.c_model = DKL(self.init_x, self.init_c.squeeze(), n_iter=self.train_iter, lr= self.lr, low_dim=self.low_dim, pretrained_nn=self.pretrained_nn, retrain_nn=self.retrain_nn,
-                                 spectrum_norm=self.spectrum_norm, exact_gp=self.exact, noise_constraint=self.noise_constraint, output_scale_constraint=self.output_scale_constraint, interpolate_prior = self.interpolate,)
+                                 spectrum_norm=self.spectrum_norm, exact_gp=self.exact, noise_constraint=self.noise_constraint, output_scale_constraint=self.output_scale_constraint, interpolate = self.interpolate,)
                
             if i % retrain_interval != 0 and self.low_dim:
                 self.c_model.feature_extractor.load_state_dict(self._c_state_dict_record, strict=False)
@@ -349,7 +349,7 @@ class DK_BO_AE_C_M():
                             n_iter=self.train_iter, lr= self.lr, low_dim=self.low_dim, 
                             pretrained_nn=self.pretrained_nn, retrain_nn=retrain_nn, spectrum_norm=spectrum_norm, exact_gp=exact_gp, 
                             noise_constraint = self.noise_constraint, output_scale_constraint=self.output_scale_constraint,
-                            interpolate_prior = self.interpolate,)
+                            interpolate = self.interpolate,)
         else:
             self.f_model = f_model
         
@@ -358,7 +358,7 @@ class DK_BO_AE_C_M():
                                     n_iter=self.train_iter, lr= self.lr, low_dim=self.low_dim,
                                     spectrum_norm=spectrum_norm, exact_gp=exact_gp, pretrained_nn=self.pretrained_nn, retrain_nn=retrain_nn,
                                     noise_constraint=self.noise_constraint, output_scale_constraint=self.output_scale_constraint, 
-                                    interpolate_prior = self.interpolate,) for c_idx in range(self.c_num)]
+                                    interpolate = self.interpolate,) for c_idx in range(self.c_num)]
         else:
             self.c_model_list = c_model_list
         
@@ -369,7 +369,7 @@ class DK_BO_AE_C_M():
             self._f_pure_dkl = DKL(self.init_x, self.init_y.squeeze(), 
                                    n_iter=self.train_iter, low_dim=self.low_dim, 
                                    pretrained_nn=None, lr=self.lr, spectrum_norm=spectrum_norm, exact_gp=exact_gp, 
-                                   interpolate_prior = self.interpolate,)
+                                   interpolate = self.interpolate,)
             self.f_loss_record = {"DK-AE":[], "DK":[]}
         self.cuda = torch.cuda.is_available()
 
@@ -407,19 +407,19 @@ class DK_BO_AE_C_M():
                                 low_dim=self.low_dim, pretrained_nn=self.pretrained_nn, retrain_nn=self.retrain_nn,
                                 spectrum_norm=self.spectrum_norm, exact_gp=self.exact, 
                                 noise_constraint=self.noise_constraint, output_scale_constraint=self.output_scale_constraint,
-                                interpolate_prior = self.interpolate,)
+                                interpolate = self.interpolate,)
         self.c_model_list = [DKL(self.init_x, self.init_c_list[c_idx].squeeze(),
                                 n_iter=self.train_iter, lr= self.lr, 
                                 low_dim=self.low_dim, pretrained_nn=self.pretrained_nn, retrain_nn=self.retrain_nn,
                                 spectrum_norm=self.spectrum_norm, exact_gp=self.exact, 
                                 noise_constraint=self.noise_constraint, output_scale_constraint=self.output_scale_constraint,
-                                interpolate_prior = self.interpolate,) for c_idx in range(self.c_num)]
+                                interpolate = self.interpolate,) for c_idx in range(self.c_num)]
         
         if self.record_loss:
             self._f_pure_dkl = DKL(self.init_x, self.init_y.squeeze(), 
                                    n_iter=self.train_iter, 
                                    low_dim=self.low_dim, pretrained_nn=None, lr=self.lr, spectrum_norm=self.spectrum_norm, 
-                                   exact_gp=self.exact, interpolate_prior = self.interpolate,)
+                                   exact_gp=self.exact, interpolate = self.interpolate,)
         
         if i % retrain_interval != 0 and self.low_dim:
             self.f_model.feature_extractor.load_state_dict(self._f_state_dict_record, strict=False)
