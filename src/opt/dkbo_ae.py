@@ -107,7 +107,7 @@ class DK_BO_AE():
         max_test_x_lcb = kwargs.get("max_test_x_lcb", None)
         min_test_x_ucb = kwargs.get("min_test_x_ucb", None)
         beta = kwargs.get("beta", 1)
-        _delta = kwargs.get("delta", .2)
+        _delta = kwargs.get("delta", .01)
 
         real_beta = beta <= 0 # if using analytic beta
         # print(beta, acq)

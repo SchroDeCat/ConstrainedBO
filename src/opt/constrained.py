@@ -23,7 +23,7 @@ DEVICE = torch.device('cpu')
 def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidence=0.8, optimization_ratio=0.8, n_init=10, n_repeat=2, train_times=10, beta=2, regularize=False, low_dim=True, 
             spectrum_norm=False, retrain_interval=1, n_iter=40, filter_interval=1, acq="ci", ci_intersection=True, verbose=True, lr=1e-2, name="test", return_result=True, retrain_nn=True,
             plot_result=False, save_result=False, save_path=None, fix_seed=False,  pretrained=False, ae_loc=None, _minimum_pick = 10, 
-            _delta = 0.2, filter_beta=.05, exact_gp=False, constrain_noise=False, local_model=True, interpolate=True):
+            _delta = 0.01, filter_beta=.05, exact_gp=False, constrain_noise=False, local_model=True, interpolate=True):
     
     ####### configurations
     if constrain_noise:
@@ -105,7 +105,10 @@ def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidenc
             for iter in iterator:
                 # optimization CI
                 if default_beta:
-                    beta = (2 * np.log((x_tensor.size(0) * (np.pi * (iter + 1)) ** 2) /(6 * _delta))) ** 0.5 # analytic beta
+                    _search_space_size = x_tensor.size(0)
+                    _constraint_num = 1
+                    beta = (2 * np.log((_search_space_size * 2 * (_constraint_num + 1) * n_iter /_delta))) ** 0.5
+                    # beta = (2 * np.log((x_tensor.size(0) * (np.pi * (iter + 1)) ** 2) /(6 * _delta))) ** 0.5 # analytic beta
                 _f_lcb, _f_ucb = beta_CI(f_lcb, f_ucb, beta)
                 _c_lcb, _c_ucb = beta_CI(c_lcb, c_ucb, beta)
                 # Take intersection of all historical CIs
@@ -162,7 +165,10 @@ def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidenc
                 if not (default_beta): # only for visualization & intersection
                     _roi_beta = min(1e2, max(1e-2, f_ucb.max()/_roi_f_ucb.max()))
                 else:
-                    _roi_beta = (2 * np.log((x_tensor[roi_filter].shape[0] * (np.pi * (iter + 1)) ** 2) /(6 * _delta))) ** 0.5 # analytic beta
+                    _search_space_size = x_tensor[roi_filter].shape[0]
+                    _constraint_num = 1
+                    _roi_beta = (2 * np.log((_search_space_size * 2 * (_constraint_num + 1) * n_iter /_delta))) ** 0.5
+                    # _roi_beta = (2 * np.log((x_tensor[roi_filter].shape[0] * (np.pi * (iter + 1)) ** 2) /(6 * _delta))) ** 0.5 # analytic beta
 
 
                 # def intersecting_ROI_globe(max_all_lcb, min_all_ucb, roi_lcb, roi_ucb, roi_beta, roi_filter, adaptive_scaling=False):
@@ -316,7 +322,7 @@ def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidenc
 def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, constraint_confidence_list, n_init=10, n_repeat=2, train_times=10, beta=2, regularize=False, low_dim=True, 
             spectrum_norm=False, retrain_interval=1, n_iter=40, filter_interval=1, acq="ci", ci_intersection=True, verbose=True, lr=1e-2, name="test", return_result=True, retrain_nn=True,
             plot_result=False, save_result=False, save_path=None, fix_seed=False,  pretrained=False, ae_loc=None, _minimum_pick = 10, 
-            _delta = 0.2, filter_beta=.05, exact_gp=False, constrain_noise=False, local_model=True, interpolate=True):
+            _delta = 0.01, filter_beta=.05, exact_gp=False, constrain_noise=False, local_model=True, interpolate=True):
     '''
     Proposed ROI based method, default acq = ci
     Support Multiple Constraints
@@ -411,7 +417,10 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
             for iter in iterator:
                 # optimization CI
                 if default_beta:
-                    beta = (2 * np.log((x_tensor.size(0) * (np.pi * (iter + 1)) ** 2) /(6 * _delta))) ** 0.5 # analytic beta
+                    _search_space_size = x_tensor.size(0)
+                    _constraint_num = c_num
+                    beta = (2 * np.log((_search_space_size * 2 * (_constraint_num + 1) * n_iter /_delta))) ** 0.5                 
+                    # beta = (2 * np.log((x_tensor.size(0) * (np.pi * (iter + 1)) ** 2) /(6 * _delta))) ** 0.5 # analytic beta
                 _f_lcb, _f_ucb = beta_CI(f_lcb, f_ucb, beta)
                 _c_lcb_list, _c_ucb_list = [None for _ in range(c_num)], [None for _ in range(c_num)]
                 for c_idx in range(c_num):
@@ -505,6 +514,9 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
                 if not (default_beta): # only for visualization & intersection
                     _roi_beta = min(1e2, max(1e-2, f_ucb.max()/_roi_f_ucb.max()) )
                 else:
+                    _search_space_size = x_tensor[roi_filter].shape[0]
+                    _constraint_num = c_num
+                    _roi_beta = (2 * np.log((_search_space_size * 2 * (_constraint_num + 1) * n_iter /_delta))) ** 0.5
                     _roi_beta = (2 * np.log((x_tensor[roi_filter].shape[0] * (np.pi * (iter + 1)) ** 2) /(6 * _delta))) ** 0.5 # analytic beta
 
   

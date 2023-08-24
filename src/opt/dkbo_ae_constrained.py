@@ -130,14 +130,16 @@ class DK_BO_AE_C():
         c_min_test_x_ucb = kwargs.get("c_min_test_x_ucb", None)
 
         beta = kwargs.get("beta", 1)
-        _delta = kwargs.get("delta", .2)
+        _delta = kwargs.get("delta", .01)
 
         real_beta = beta <= 0 # if using analytic beta
         _candidate_idx_list = np.zeros(n_iter)
         ### optimization loop
         for i in iterator:
             if real_beta:
-                beta = (2 * np.log((self.x_tensor.size(0) * (np.pi * (self.init_x.size(0) + 1)) ** 2) /(6 * _delta))) ** 0.5
+                _search_space_size = self.x_tensor.size(0)
+                _constraint_num = 1
+                beta = (2 * np.log((_search_space_size * 2 * (_constraint_num + 1) * n_iter /_delta))) ** 0.5
             if ci_intersection:
                 assert not( f_max_test_x_lcb is None or f_min_test_x_ucb is None)
                 _candidate_idx_f = self.f_model.intersect_CI_next_point(self.x_tensor[self.roi_filter], 
@@ -231,14 +233,16 @@ class DK_BO_AE_C():
         c_min_test_x_ucb = kwargs.get("c_min_test_x_ucb", None)
 
         beta = kwargs.get("beta", 1)
-        _delta = kwargs.get("delta", .2)
+        _delta = kwargs.get("delta", .01)
 
         real_beta = beta <= 0 # if using analytic beta
         _candidate_idx_list = np.zeros(n_iter)
         ### optimization loop
         for i in iterator:
             if real_beta:
-                beta = (2 * np.log((self.x_tensor.size(0) * (np.pi * (self.init_x.size(0) + 1)) ** 2) /(6 * _delta))) ** 0.5
+                _search_space_size = self.x_tensor.size(0)
+                _constraint_num = 1
+                beta = (2 * np.log((_search_space_size * 2 * (_constraint_num + 1) * n_iter /_delta))) ** 0.5
             if ci_intersection:
                 _candidate_idx_c = self.c_model.intersect_CI_next_point(self.x_tensor[self.c_uci_filter], 
                                                         max_test_x_lcb=c_max_test_x_lcb[self.c_uci_filter], 
@@ -472,7 +476,7 @@ class DK_BO_AE_C_M():
         c_min_test_x_ucb_list = kwargs.get("c_min_test_x_ucb_list", None)
 
         beta = kwargs.get("beta", 1)
-        _delta = kwargs.get("delta", .2)
+        _delta = kwargs.get("delta", .01)
 
         real_beta = beta <= 0 # if using analytic beta
         _candidate_idx_list = np.zeros(n_iter)
@@ -482,7 +486,9 @@ class DK_BO_AE_C_M():
             _acq = 'ci'
             # _acq = 'lcb' if i // 2 and acq == 'ci' else 'ci'
             if real_beta:
-                beta = (2 * np.log((self.x_tensor.size(0) * (np.pi * (self.init_x.size(0) + 1)) ** 2) /(6 * _delta))) ** 0.5
+                _search_space_size = self.x_tensor.size(0)
+                _constraint_num = self.c_num
+                beta = (2 * np.log((_search_space_size * 2 * (_constraint_num + 1) * n_iter /_delta))) ** 0.5
             # acq values
             if ci_intersection:
                 assert not( f_max_test_x_lcb is None or f_min_test_x_ucb is None)

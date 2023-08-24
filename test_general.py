@@ -125,7 +125,7 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
                     spectrum_norm=False, retrain_interval=1, n_iter=n_iter, filter_interval=1, acq="ci", 
                     ci_intersection=True, verbose=True, lr=1e-4, name=name, return_result=True, retrain_nn=True,
                     plot_result=True, save_result=True, save_path='./res/cbo', fix_seed=True,  pretrained=False, ae_loc=None, 
-                    _minimum_pick = 10, _delta = 0.2, beta=2, filter_beta=2, exact_gp=False, constrain_noise=constrain_noise, local_model=False)
+                    _minimum_pick = 10, _delta = 0.01, beta=2, filter_beta=2, exact_gp=False, constrain_noise=constrain_noise, local_model=False)
 
     elif method =='scbo':
         init_feasible_reward = y_tensor[:n_init][feasible_filter[:n_init]]
