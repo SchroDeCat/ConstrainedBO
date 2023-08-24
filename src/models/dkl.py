@@ -70,7 +70,8 @@ class DKL():
         self.interpolate = kwargs.get('interpolate', False)
         interpolate_y = self.train_x.clone()
         interpolate_d = self.train_y.clone().reshape([self.train_x.size(0)])
-        _kernel = 'cubic' if self.train_x.size(0) > self.train_x.size(1) else 'linear'
+        # _kernel = 'cubic' if self.train_x.size(0) > self.train_x.size(1) else 'linear'
+        _kernel = 'linear'
         self.interpolator = RBFInterpolator(y=interpolate_y, d=interpolate_d, smoothing=1e-1, kernel=_kernel)
         if self.interpolate:
             self._train_y = self.train_y - self.interpolator(self.train_x).squeeze()
