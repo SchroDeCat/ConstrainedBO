@@ -145,14 +145,14 @@ class DK_BO_AE_C():
                 _candidate_idx_f = self.f_model.intersect_CI_next_point(self.x_tensor[self.roi_filter], 
                                                                         max_test_x_lcb=f_max_test_x_lcb[self.roi_filter], 
                                                                         min_test_x_ucb=f_min_test_x_ucb[self.roi_filter], 
-                                                                        acq=acq, beta=beta, return_idx=True)
+                                                                        acq=acq if acq != 'ci' else 'cucb', beta=beta, return_idx=True)
                 if sum(self.c_uci_filter) > 0:
                     _candidate_idx_c = self.c_model.intersect_CI_next_point(self.x_tensor[self.c_uci_filter], 
                                                             max_test_x_lcb=c_max_test_x_lcb[self.c_uci_filter], 
                                                             min_test_x_ucb=c_min_test_x_ucb[self.c_uci_filter], 
                                                             acq=acq, beta=beta, return_idx=True)
             else:
-                _candidate_idx_f = self.f_model.next_point(self.x_tensor[self.roi_filter], acq, "love", return_idx=True, beta=beta,)
+                _candidate_idx_f = self.f_model.next_point(self.x_tensor[self.roi_filter], acq if acq != 'ci' else 'cucb', "love", return_idx=True, beta=beta,)
                 if sum(self.c_uci_filter) > 0:
                     _candidate_idx_c = self.c_model.next_point(self.x_tensor[self.c_uci_filter], acq, "love", return_idx=True, beta=beta,)
             
@@ -495,7 +495,7 @@ class DK_BO_AE_C_M():
                 _candidate_idx_f = self.f_model.intersect_CI_next_point(self.x_tensor[self.roi_filter], 
                                                                         max_test_x_lcb=f_max_test_x_lcb[self.roi_filter], 
                                                                         min_test_x_ucb=f_min_test_x_ucb[self.roi_filter], 
-                                                                        acq=_acq, beta=beta, return_idx=True)
+                                                                        acq=_acq if _acq != 'ci' else 'cucb', beta=beta, return_idx=True)
 
                 for c_idx, (c_uci_filter, c_max_test_x_lcb, c_min_test_x_ucb) in enumerate(zip(self.c_uci_filter_list, c_max_test_x_lcb_list, c_min_test_x_ucb_list)):
                     if sum(c_uci_filter) > 0:
@@ -505,7 +505,7 @@ class DK_BO_AE_C_M():
                                                                 acq=_acq, beta=beta, return_idx=True)
                         _candidate_idx_c_list[c_idx] = _candidate_idx_c
             else:
-                _candidate_idx_f = self.f_model.next_point(self.x_tensor[self.roi_filter], acq, "love", return_idx=True, beta=beta,)
+                _candidate_idx_f = self.f_model.next_point(self.x_tensor[self.roi_filter], acq if acq != 'ci' else 'cucb', "love", return_idx=True, beta=beta,)
                 for c_idx, c_uci_filter in enumerate(self.c_uci_filter_list):
                     if sum(c_uci_filter) > 0:
                         _candidate_idx_c = self.c_model_list[c_idx].next_point(self.x_tensor[c_uci_filter], acq, "love", return_idx=True, beta=beta,)
