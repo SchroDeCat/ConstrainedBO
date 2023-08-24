@@ -39,9 +39,15 @@ def c_fun_3(x):  # Equivalent to enforcing that x[2]-x[3] >= 0
 c_fun_list = [c_fun_1, c_fun_2, c_fun_3]
 c_num = len(c_fun_list)
 
+interpolate=True
+# interpolate=False
+constrain_noise = True
+# constrain_noise = False
+
 n_init = 10
 n_iter = 60
-train_times = 50
+# train_times = 50
+train_times = 5
 n_repeat = 2
 max_cholesky_size = float("inf")  # Always use Cholesky
 
@@ -55,18 +61,25 @@ feasible_filter = feasible_filter_gen(c_tensor_list, constraint_threshold_list)
 
 print(f"initial reward {y_tensor[:n_init][feasible_filter[:n_init]].squeeze()} while global max {y_tensor[feasible_filter].max().item()}")
 
-regret = cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list=constraint_threshold_list, constraint_confidence_list=constraint_confidence_list,
-            n_init=10, n_repeat=n_repeat, train_times=train_times, regularize=False, low_dim=True,
-            spectrum_norm=False, retrain_interval=1, n_iter=n_iter, filter_interval=1, acq="ci", 
-            ci_intersection=False, verbose=True, lr=1e-4, name="test", return_result=True, retrain_nn=True,
-            plot_result=True, save_result=True, save_path='./res', fix_seed=True,  pretrained=False, ae_loc=None, 
-            _minimum_pick = 10, _delta = 0.2, beta=0, filter_beta=0, exact_gp=False, constrain_noise=True, local_model=False)
+# DK
+regret = cbo_multi(x_tensor, y_tensor, c_tensor_list, 
+                    constraint_threshold_list=constraint_threshold_list, constraint_confidence_list=constraint_confidence_list,
+                    n_init=10, n_repeat=n_repeat, train_times=train_times, regularize=False, low_dim=True,
+                    spectrum_norm=False, retrain_interval=1, n_iter=n_iter, filter_interval=1, acq="ci", 
+                    ci_intersection=False, verbose=True, lr=1e-4, name="test_m", return_result=True, retrain_nn=True,
+                    plot_result=True, save_result=True, save_path='./res', fix_seed=True,  pretrained=False, ae_loc=None, 
+                    _minimum_pick = 10, _delta = 0.2, beta=0, filter_beta=0, exact_gp=False, constrain_noise=constrain_noise, 
+                    local_model=False, interpolate=interpolate)
+print(f"With constraints, the minimum regret we found is: {regret.min(axis=-1)}")
 
-# regret = cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list=constraint_threshold_list, constraint_confidence_list=constraint_confidence_list,
-#             n_init=10, n_repeat=n_repeat, train_times=train_times, regularize=False, low_dim=True,
-#             spectrum_norm=False, retrain_interval=1, n_iter=n_iter, filter_interval=1, acq="ci", 
-#             ci_intersection=False, verbose=True, lr=1e-4, name="test", return_result=True, retrain_nn=True,
-#             plot_result=True, save_result=True, save_path='./res', fix_seed=True,  pretrained=False, ae_loc=None, 
-#             _minimum_pick = 10, _delta = 0.2, beta=0, filter_beta=0, exact_gp=True, constrain_noise=True, local_model=False)
+# exact GP
+regret = cbo_multi(x_tensor, y_tensor, c_tensor_list, 
+                    constraint_threshold_list=constraint_threshold_list, constraint_confidence_list=constraint_confidence_list,
+                    n_init=10, n_repeat=n_repeat, train_times=train_times, regularize=False, low_dim=True,
+                    spectrum_norm=False, retrain_interval=1, n_iter=n_iter, filter_interval=1, acq="ci", 
+                    ci_intersection=False, verbose=True, lr=1e-4, name="test_m", return_result=True, retrain_nn=True,
+                    plot_result=True, save_result=True, save_path='./res', fix_seed=True,  pretrained=False, ae_loc=None, 
+                    _minimum_pick = 10, _delta = 0.2, beta=0, filter_beta=0, exact_gp=True, constrain_noise=constrain_noise, 
+                    local_model=False, interpolate=interpolate)
 
 print(f"With constraints, the minimum regret we found is: {regret.min(axis=-1)}")

@@ -113,7 +113,7 @@ class DKL():
         '''
         test_x = test_x.cpu()
         if self.interpolate:
-            _interpolation = self.interpolator(test_x.cpu())
+            _interpolation = torch.from_numpy(self.interpolator(test_x.cpu())).float()
             if cuda:
                 _interpolation = _interpolation.cuda()
         else:
