@@ -39,16 +39,18 @@ def c_fun_3(x):  # Equivalent to enforcing that x[2]-x[3] >= 0
 c_fun_list = [c_fun_1, c_fun_2, c_fun_3]
 c_num = len(c_fun_list)
 
-interpolate=True
-# interpolate=False
-constrain_noise = True
-# constrain_noise = False
+# interpolate=True
+interpolate=False
+# constrain_noise = True
+constrain_noise = False
 
 n_init = 10
-n_iter = 60
-# train_times = 50
-train_times = 5
-n_repeat = 2
+# n_iter = 60
+n_iter = 100
+train_times = 50
+# train_times = 5
+# n_repeat = 2
+n_repeat = 10
 max_cholesky_size = float("inf")  # Always use Cholesky
 
 
@@ -68,7 +70,7 @@ regret = cbo_multi(x_tensor, y_tensor, c_tensor_list,
                     spectrum_norm=False, retrain_interval=1, n_iter=n_iter, filter_interval=1, acq="ci", 
                     ci_intersection=False, verbose=True, lr=1e-4, name="test_m", return_result=True, retrain_nn=True,
                     plot_result=True, save_result=True, save_path='./res', fix_seed=True,  pretrained=False, ae_loc=None, 
-                    _minimum_pick = 10, _delta = 0.2, beta=0, filter_beta=0, exact_gp=False, constrain_noise=constrain_noise, 
+                    _minimum_pick = 10, _delta = 0.01, beta=.5, filter_beta=.5, exact_gp=False, constrain_noise=constrain_noise, 
                     local_model=False, interpolate=interpolate)
 print(f"With constraints, the minimum regret we found is: {regret.min(axis=-1)}")
 
@@ -79,7 +81,7 @@ regret = cbo_multi(x_tensor, y_tensor, c_tensor_list,
                     spectrum_norm=False, retrain_interval=1, n_iter=n_iter, filter_interval=1, acq="ci", 
                     ci_intersection=False, verbose=True, lr=1e-4, name="test_m", return_result=True, retrain_nn=True,
                     plot_result=True, save_result=True, save_path='./res', fix_seed=True,  pretrained=False, ae_loc=None, 
-                    _minimum_pick = 10, _delta = 0.2, beta=0, filter_beta=0, exact_gp=True, constrain_noise=constrain_noise, 
+                    _minimum_pick = 10, _delta = 0.01, beta=2, filter_beta=2, exact_gp=True, constrain_noise=constrain_noise, 
                     local_model=False, interpolate=interpolate)
 
 print(f"With constraints, the minimum regret we found is: {regret.min(axis=-1)}")

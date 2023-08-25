@@ -421,7 +421,7 @@ class DKL():
                 assert max(self.acq_val) > 1e-10
 
 
-        elif acq.lower() in ["ucb", 'ci', 'lcb', 'rci']:
+        elif acq.lower() in ["ucb", 'ci', 'lcb', 'rci', "cucb"]:
             with torch.no_grad(), gpytorch.settings.fast_pred_var():
                 observed_pred = self.likelihood(self.model(_test_x))
                 lower, upper = observed_pred.confidence_region()
@@ -533,14 +533,14 @@ class DKL():
         return prob
 
     @classmethod
-    def mvn_survival(self, mvn, threshold:int=0, interpolation:torch.tensor=None):
+    def mvn_survival(self, mvn, threshold:int=0, interpolation_shift:torch.tensor=None):
         '''
         Marginal probability on test x that f(x) > threshold
         Return: p_tensor.size == test_x.size
         '''
         mean, stddev = mvn.mean, mvn.stddev
-        if not (interpolation is None):
-            mean = mean + interpolation
+        if not (interpolation_shift is None):
+            mean = mean + interpolation_shift
 
         prob = torch.tensor([1-norm.cdf(x=threshold, loc=loc.detach().item(), scale=scale.detach().item()) for loc, scale in zip(mean, stddev)])
         return prob
@@ -563,7 +563,7 @@ class DKL():
 
         _interpolation = self.interpolation_calibrate(test_x, target_value=None, cuda=self.cuda)
 
-        if acq.lower() in ["ucb", 'ci', 'lcb', 'ucb-debug']:
+        if acq.lower() in ["ucb", 'ci', 'lcb', 'ucb-debug', "cucb"]:
             with torch.no_grad(), gpytorch.settings.fast_pred_var():
                 observed_pred = self.likelihood(self.model(test_x))
                 lower, upper = observed_pred.confidence_region()
@@ -580,6 +580,8 @@ class DKL():
 
             if acq.lower() == 'ucb':
                 self.acq_val = upper
+            elif acq.lower() == 'cucb':
+                self.acq_val = upper - lower.min()
             elif acq.lower() == 'ci':
                 self.acq_val = upper - lower
             elif acq.lower() == 'lcb':

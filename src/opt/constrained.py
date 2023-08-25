@@ -568,6 +568,7 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
                 _iterator_info['Sci Accuracy'] = f"{(c_sci_filter.logical_and(feasible_filter).sum()/c_sci_filter.sum()).detach().item():.2%}"
                 _iterator_info['ROI Y range'] = f"{roi_y_min:.2f}, {roi_y_max:.2f}"
                 _iterator_info['filter_on_intersect'] = filter_on_intersect
+                _iterator_info['beta'] = beta
                 iterator.set_postfix(_iterator_info)
 
                 ucb_filtered_idx = util_array[roi_filter]

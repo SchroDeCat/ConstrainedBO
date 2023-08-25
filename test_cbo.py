@@ -44,10 +44,10 @@ n_pts = 20000
 def c_fun(x):  # Equivalent to enforcing that x[0] >= 0
     return x[0]
 
-interpolate=True
-# interpolate=False
-constrain_noise = True
-# constrain_noise = False
+# interpolate=True
+interpolate=False
+# constrain_noise = True
+constrain_noise = False
 n_init = 10
 n_iter = 100
 # n_iter=20

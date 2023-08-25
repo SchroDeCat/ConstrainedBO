@@ -551,7 +551,7 @@ class DK_BO_AE_C_M():
         '''
         First Stage: Query both f and c simultaneously
         '''
-        assert self.interpolate == False
+        # assert self.interpolate == False
         self.regret = np.zeros(n_iter)
         if_tqdm = kwargs.get("if_tqdm", False)
         early_stop = kwargs.get("early_stop", True)
@@ -577,6 +577,10 @@ class DK_BO_AE_C_M():
                         self.f_model.model.eval()
                         _posterior = self.f_model.model(self.x_tensor)
                         _samples = _posterior.rsample(torch.Size([_num_sample]))
+                        if self.interpolate: # interpolation calibration
+                            assert self.f_model.interpolate
+                            _samples = self.f_model.interpolation_calibrate(self.x_tensor, _samples, cuda=self.cuda)
+
                     feasible_obs_filter = feasible_filter_gen(self.init_c_list, self.c_threshold_list)
                     if sum(feasible_obs_filter) > 0:
                         _best_y = torch.max(self.init_y[feasible_obs_filter])
@@ -601,6 +605,9 @@ class DK_BO_AE_C_M():
                                 _model = _dk.model
                                 _model.eval()
                                 _c_sample = _model(self.x_tensor[subsample_filter]).rsample(torch.Size([1])).reshape([-1,1])
+                                if self.interpolate: # interpolation calibration
+                                    assert _dk.interpolate
+                                    _c_sample = _dk.interpolation_calibrate(self.x_tensor[subsample_filter], _c_sample, cuda=self.cuda)
                                 _c_tensor_list.append(_c_sample)
                         _feasible_filter = feasible_filter_gen(_c_tensor_list, self.c_threshold_list)
                         if _feasible_filter.sum() == 0:
@@ -609,7 +616,8 @@ class DK_BO_AE_C_M():
                         # sample f
                         self.f_model.model.eval()
                         _mvn = self.f_model.model(self.x_tensor[subsample_filter])
-                        _acq_f = torch.cat([self.f_model.mvn_survival(_mvn, threshold).reshape([1, _subsample_num]) for threshold in _max_f_samples], dim=0)
+                        interpolation_shift = self.f_model.interpolation_calibrate(self.x_tensor[subsample_filter], cuda=self.cuda)
+                        _acq_f = torch.cat([self.f_model.mvn_survival(_mvn, threshold, interpolation_shift).reshape([1, _subsample_num]) for threshold in _max_f_samples], dim=0)
                         assert _acq_f.size(0) == _num_sample
                         assert _acq_f.size(1) == subsample_filter.shape[0]
 

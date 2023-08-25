@@ -103,7 +103,7 @@ result = cbo_multi_nontest(x_tensor, y_tensor, c_tensor_list, constraint_thresho
                             spectrum_norm=False, acq="ci", 
                             ci_intersection=False, verbose=True, lr=1e-2,
                             pretrained=False, ae_loc=None, 
-                            _minimum_pick = 10, _delta = 0.2, filter_beta=0, beta=0, 
+                            _minimum_pick = 10, _delta = 0.01, filter_beta=0, beta=0, 
                             exact_gp=False, constrain_noise=True, local_model=False,
                             output_scale_constraint=output_scale_constraint)
 

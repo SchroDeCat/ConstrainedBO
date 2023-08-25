@@ -54,11 +54,14 @@ c_fun_list = [c_fun_1, c_fun_2, c_fun_3]
 c_num = len(c_fun_list)
 
 n_init = 10
-n_iter = 200
+# n_iter = 200
+n_iter=20
 train_times = 50
-n_repeat = 10
+# n_repeat = 10
+n_repeat=2
 # acq = "qei"
 # acq = 'cmes-ibo'
+interpolate=True
 acq = 'random'
 max_cholesky_size = float("inf")  # Always use Cholesky
 
@@ -79,17 +82,17 @@ regret = baseline_cbo_m(x_tensor, y_tensor, c_tensor_list,
                         n_init=10, n_repeat=n_repeat, train_times=train_times, n_iter=n_iter,
                         regularize=False, low_dim=True,
                         spectrum_norm=False, retrain_interval=1, acq=acq, 
-                        verbose=True, lr=1e-4, name="test", 
+                        verbose=True, lr=1e-4, name="test-baseline", 
                         return_result=True, retrain_nn=True,
                         plot_result=True, save_result=True, save_path=f'./res/baseline/{acq}', 
                         fix_seed=True,  pretrained=False, ae_loc=None, 
-                        exact_gp=False, constrain_noise=True,)
+                        exact_gp=False, constrain_noise=True, interpolate=interpolate)
 
 # regret = baseline_cbo_m(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list=constraint_threshold_list, constraint_confidence_list=constraint_confidence_list,
 #             n_init=10, n_repeat=n_repeat, train_times=train_times, regularize=False, low_dim=True,
 #             spectrum_norm=False, retrain_interval=1, n_iter=n_iter, filter_interval=1, acq="ci", 
 #             ci_intersection=False, verbose=True, lr=1e-4, name="test", return_result=True, retrain_nn=True,
 #             plot_result=True, save_result=True, save_path='./res', fix_seed=True,  pretrained=False, ae_loc=None, 
-#             _minimum_pick = 10, _delta = 0.2, beta=0, filter_beta=0, exact_gp=True, constrain_noise=True, local_model=False)
+#             _minimum_pick = 10, _delta = 0.01, beta=0, filter_beta=0, exact_gp=True, constrain_noise=True, local_model=False)
 
 print(f"With constraints, the minimum regret we found is: {regret.min(axis=-1)}")
