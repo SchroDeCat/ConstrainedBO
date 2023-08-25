@@ -607,7 +607,7 @@ class DK_BO_AE_C_M():
                                 _c_sample = _model(self.x_tensor[subsample_filter]).rsample(torch.Size([1])).reshape([-1,1])
                                 if self.interpolate: # interpolation calibration
                                     assert _dk.interpolate
-                                    _c_sample = _dk.interpolation_calibrate(self.x_tensor[subsample_filter], _c_sample, cuda=self.cuda)
+                                    _c_sample = _dk.interpolation_calibrate(self.x_tensor[subsample_filter], _c_sample.squeeze(), cuda=self.cuda).unsqueeze(dim=-1)
                                 _c_tensor_list.append(_c_sample)
                         _feasible_filter = feasible_filter_gen(_c_tensor_list, self.c_threshold_list)
                         if _feasible_filter.sum() == 0:

@@ -61,8 +61,10 @@ train_times = 50
 n_repeat=2
 # acq = "qei"
 # acq = 'cmes-ibo'
-interpolate=True
-acq = 'random'
+# interpolate=True
+interpolate = False
+# acq = 'random'
+acq = 'cmes-ibo'
 max_cholesky_size = float("inf")  # Always use Cholesky
 
 print(f"acq {acq} n repeat {n_repeat}")
