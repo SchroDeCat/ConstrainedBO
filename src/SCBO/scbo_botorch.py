@@ -250,7 +250,7 @@ class SCBO:
             model=model, constraint_model=constraint_model, replacement=False
         )
         with torch.no_grad():
-            X_next = constrained_thompson_sampling(X_cand, num_samples=batch_size)
+            X_next = constrained_thompson_sampling(X_cand.float(), num_samples=batch_size)
 
         return X_next
 
@@ -266,6 +266,7 @@ class SCBO:
             # refer to itself, workaround to avoid major revision to the implementation
             # only support interpolation for dk
             dk.model.interpolation_calibrate = dk.interpolation_calibrate 
+            dk.model.if_cuda = dk.cuda
             return dk.model
         
         dim = self.dim
@@ -306,7 +307,7 @@ class SCBO:
             with gpytorch.settings.max_cholesky_size(self.max_cholesky_size):
                 X_next = self.generate_batch(
                     model=model,
-                    X=self.train_X,
+                    X=self.train_X.float(),
                     Y=self.train_Y,
                     batch_size=self.batch_size,
                     n_candidates=2000,

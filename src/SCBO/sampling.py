@@ -251,7 +251,7 @@ class ConstrainedMaxPosteriorSampling(MaxPosteriorSampling):
                 posterior = self.model(X)
                 samples = posterior.rsample(torch.Size([num_samples]))
                 if self.interpolate:
-                    samples = self.model.interpolation_calibrate(X, samples, cuda=self.model.cuda)
+                    samples = self.model.interpolation_calibrate(X, samples, cuda=self.model.if_cuda)
                 samples = samples.T
 
         # c_posterior = self.constraint_model.posterior(
@@ -267,7 +267,7 @@ class ConstrainedMaxPosteriorSampling(MaxPosteriorSampling):
                     posterior = c_model(X)
                     c_samples = posterior.rsample(torch.Size([num_samples]))
                     if self.interpolate:
-                        c_samples = c_model.interpolation_calibrate(X, c_samples, cuda=c_model.cuda)
+                        c_samples = c_model.interpolation_calibrate(X, c_samples, cuda=c_model.if_cuda)
                     constraint_samples_list.append(c_samples)
         constraint_samples = torch.cat(constraint_samples_list, dim=0).T.unsqueeze(0)
         valid_samples = constraint_samples <= 0
