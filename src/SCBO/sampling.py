@@ -189,6 +189,7 @@ class ConstrainedMaxPosteriorSampling(MaxPosteriorSampling):
         objective: Optional[MCAcquisitionObjective] = None,
         posterior_transform: Optional[PosteriorTransform] = None,
         replacement: bool = True,
+        interpolate: bool = True,
         minimize_constraints_only: bool = False,
     ) -> None:
         r"""Constructor for the SamplingStrategy base class.
@@ -220,6 +221,7 @@ class ConstrainedMaxPosteriorSampling(MaxPosteriorSampling):
             posterior_transform=posterior_transform,
             replacement=replacement,
         )
+        self.interpolate = interpolate
         self.constraint_model = constraint_model
         self.minimize_constraints_only = minimize_constraints_only
 
@@ -248,6 +250,8 @@ class ConstrainedMaxPosteriorSampling(MaxPosteriorSampling):
             with gpytorch.settings.fast_pred_samples():
                 posterior = self.model(X)
                 samples = posterior.rsample(torch.Size([num_samples]))
+                if self.interpolate:
+                    samples = self.model.interpolation_calibrate(X, samples, cuda=self.model.cuda)
                 samples = samples.T
 
         # c_posterior = self.constraint_model.posterior(
@@ -261,7 +265,10 @@ class ConstrainedMaxPosteriorSampling(MaxPosteriorSampling):
                 c_model.eval()
                 with gpytorch.settings.fast_pred_samples():
                     posterior = c_model(X)
-                    constraint_samples_list.append(posterior.rsample(torch.Size([num_samples])))
+                    c_samples = posterior.rsample(torch.Size([num_samples]))
+                    if self.interpolate:
+                        c_samples = c_model.interpolation_calibrate(X, c_samples, cuda=c_model.cuda)
+                    constraint_samples_list.append(c_samples)
         constraint_samples = torch.cat(constraint_samples_list, dim=0).T.unsqueeze(0)
         valid_samples = constraint_samples <= 0
         if valid_samples.shape[-1] > 1:  # if more than one constraint

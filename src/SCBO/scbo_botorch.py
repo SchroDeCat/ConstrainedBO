@@ -71,7 +71,8 @@ class ScboState:
 
 class SCBO:
     def __init__(self, obj_func, c_func_list, dim:int, lower_bound, upper_bound, 
-                 batch_size:int=1, n_init:int=10, verbose=True, dk=False, constrain_noise=True,
+                 batch_size:int=1, n_init:int=10, verbose=True, dk=True, constrain_noise=True,
+                 interpolate=True,
                 **kwargs):
         self.max_cholesky_size = float("inf") 
         self.dim = dim
@@ -82,6 +83,9 @@ class SCBO:
         self.func = obj_func
         self.c_func_list = c_func_list
         self.verbose = verbose
+        if interpolate and not dk:
+            raise Warning("Don't support interpolation without DK!")
+        self.interpolate = interpolate and dk
         self.dk = dk
         if self.dk:
             self.train_times = kwargs.get("train_times", 50)
@@ -256,9 +260,12 @@ class SCBO:
 
         if self.dk:
             dk = DKL(X.float(), Y.float().squeeze(), n_iter=self.train_times, lr=self.learning_rate, low_dim=True, 
-                pretrained_nn=None,  exact_gp=False, 
+                pretrained_nn=None,  exact_gp=False, interpolate=self.interpolate,
                 noise_constraint = None if not self.constrain_noise else global_noise_constraint)
             dk.train_model(verbose=False)
+            # refer to itself, workaround to avoid major revision to the implementation
+            # only support interpolation for dk
+            dk.model.interpolation_calibrate = dk.interpolation_calibrate 
             return dk.model
         
         dim = self.dim

@@ -54,6 +54,7 @@ train_iter = 50
 lr = 1e-4
 exact_gp = False
 name = 'ackly-3c'
+interpolate = True
 plot_results = True
 save_results = True
 save_path = f"{os.path.dirname(__file__)}/../../res/scbo"
@@ -122,14 +123,14 @@ with warnings.catch_warnings():
             torch.backends.cudnn.deterministic = True
 
         scbo = scbo_botorch.SCBO(fun, [c1, c2, c3], dim=dim, lower_bound=lb, upper_bound=ub, train_times=train_iter, lr=lr,
-                        batch_size = batch_size, n_init=n_init, train_X = x_tensor[:n_init], dk=not exact_gp)
+                        batch_size = batch_size, n_init=n_init, train_X = x_tensor[:n_init], dk=not exact_gp, interpolate=interpolate)
 
         rewards = scbo.optimization(n_iter=n_iter//batch_size, x_tensor=x_tensor)
         regrets = max_global - rewards
         reg_record[rep] = regrets[-n_iter:]
 
 reg_output_record = reg_record.mean(axis=0)
-_file_prefix = f"Figure_{name}{'-Exact' if exact_gp else ''}-RI{1}"
+_file_prefix = f"Figure_{name}{'-InterP' if interpolate else ''}{'-Exact' if exact_gp else ''}-RI{1}"
 _file_postfix = f"-{'ts'}-R{n_repeat}-P{1}-T{n_iter}_I{1}_L{int(-np.log10(lr))}-TI{train_iter}"
 if plot_results:
     fig = plt.figure()
