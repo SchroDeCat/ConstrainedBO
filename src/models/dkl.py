@@ -433,8 +433,8 @@ class DKL():
 
             if acq.lower() in ['ucb', 'cucb']:
                 self.acq_val = upper
-                if acq.lower == 'cucb':
-                    self.acq_val = upper - lower.min()
+                if acq.lower() == 'cucb':
+                    self.acq_val = upper - lower.max()
             elif acq.lower() in ['ci', 'rci']:
                 self.acq_val = upper - lower
                 if acq.lower == 'rci':
@@ -581,7 +581,7 @@ class DKL():
             if acq.lower() == 'ucb':
                 self.acq_val = upper
             elif acq.lower() == 'cucb':
-                self.acq_val = upper - lower.min()
+                self.acq_val = upper - lower.max()
             elif acq.lower() == 'ci':
                 self.acq_val = upper - lower
             elif acq.lower() == 'lcb':

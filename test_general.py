@@ -58,7 +58,7 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
 
         beta = .1
         filter_beta = 4
-        constrain_noise = False
+        constrain_noise = True
     elif exp == "rosenbrock_5d":
         cbo_factory = Constrained_Data_Factory(num_pts=50000)
         scbo = 'scbo' in method
@@ -206,7 +206,6 @@ if __name__ == "__main__":
     # n_iter = 30
     n_iter = 200
     train_times = 5
-    constrain_noise = True
     # train_times=10
 
     # experiment(n_init=5, method='qei')
@@ -214,16 +213,16 @@ if __name__ == "__main__":
     # experiment(n_init=5, method='cmes-ibo')
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=40, method='scbo')
     # experiment(n_init=5, method='cbo', n_iter=200)
-    experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='cbo')
+    # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='cbo')
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='qei')
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='ts')
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='cmes-ibo')
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='scbo')
-    experiment(exp='ackley_5d', n_init=n_init2, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='cbo', constrain_noise=constrain_noise)
-    experiment(exp='ackley_5d', n_init=n_init2, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='qei', constrain_noise=constrain_noise)
+    experiment(exp='ackley_5d', n_init=n_init2, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='cbo')
+    experiment(exp='ackley_5d', n_init=n_init2, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='qei')
     # experiment(exp='ackley_5d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='ts')
-    experiment(exp='ackley_5d', n_init=n_init2, n_repeat=n_repeat, n_iter=n_iter,train_times=train_times,  method='cmes-ibo', constrain_noise=constrain_noise)
-    experiment(exp='ackley_5d', n_init=n_init2, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='scbo', constrain_noise=constrain_noise)
+    experiment(exp='ackley_5d', n_init=n_init2, n_repeat=n_repeat, n_iter=n_iter,train_times=train_times,  method='cmes-ibo')
+    experiment(exp='ackley_5d', n_init=n_init2, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='scbo')
     # experiment(exp='rosenbrock_5d', n_init=10, n_repeat=1, n_iter=20, method='qei', constrain_noise=True)
     # experiment(exp='rosenbrock_5d', n_init=10, n_repeat=1, n_iter=20, method='cmes-ibo', constrain_noise=True)
     # experiment(exp='rosenbrock_5d', n_init=10, n_repeat=1, n_iter=20, method='scbo', constrain_noise=True)
