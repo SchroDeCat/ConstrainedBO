@@ -175,7 +175,8 @@ class Constrained_Data_Factory(Data_Factory):
         
         self.objective = lambda x: -Rastrigin(dim=1)(x)
         # self.c_func1 = lambda x: -(x+3)**2 + 0.64  # |x - -2| < 0.5
-        self.c_func1 = lambda x: -torch.abs(x+3.1)**(1/2) + .8 **(1/2) 
+        # self.c_func1 = lambda x: -torch.abs(x+3.1)**(1/2) + .8 **(1/2) 
+        self.c_func1 = lambda x: torch.abs(x+.7)**(1/2) - 2 **(1/2) 
         self.c_func1_scbo = lambda x: -self.c_func1(x)
         self.c_func_list = [self.c_func1_scbo]
         self.x_tensor = self._generate_x_tensor(dim=1, num=self._num_pts).to(device=device, dtype=dtype)

@@ -44,11 +44,11 @@ class LargeFeatureExtractor(torch.nn.Sequential):
     def __init__(self, data_dim, low_dim, add_spectrum_norm):
         
         super(LargeFeatureExtractor, self).__init__()
-        self.add_module('linear1', add_spectrum_norm(torch.nn.Linear(data_dim, 1000)))
-        self.add_module('relu1', torch.nn.ReLU())
-        self.add_module('linear2',  add_spectrum_norm(torch.nn.Linear(1000, 500)))
-        self.add_module('relu2', torch.nn.ReLU())
-        self.add_module('linear3',  add_spectrum_norm(torch.nn.Linear(500, 50)))
+        self.add_module('linear1', add_spectrum_norm(torch.nn.Linear(data_dim, 100)))
+        self.add_module('relu1', torch.nn.Sigmoid())
+        self.add_module('linear2',  add_spectrum_norm(torch.nn.Linear(100, 50)))
+        # self.add_module('relu2', torch.nn.Sigmoid())
+        # self.add_module('linear3',  add_spectrum_norm(torch.nn.Linear(500, 50)))
         # test if using higher dimensions could be better
         if low_dim:
             # self.add_module('relu3', torch.nn.ReLU())

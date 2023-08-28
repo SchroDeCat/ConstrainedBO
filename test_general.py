@@ -16,7 +16,7 @@ METHODs = ['cbo',  'qei', 'scbo', 'ts','random', 'cmes-ibo', ]
 
 
 def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_times:int=50, n_iter:int=20, n_init:int=10, 
-               constrain_noise:bool=False, interpolate:bool=True, c_portion:float=None)->None:
+               constrain_noise:bool=True, interpolate:bool=True, c_portion:float=None, low_dim:bool=True, exact_gp:bool=False)->None:
     exp = exp.lower()
     method = method.lower()
     assert exp in EXPS
@@ -117,24 +117,32 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         regret = baseline_cbo_m(x_tensor, y_tensor, c_tensor_list, 
                                 constraint_threshold_list=constraint_threshold_list, constraint_confidence_list=constraint_confidence_list,
                                 n_init=n_init, n_repeat=n_repeat, train_times=train_times, n_iter=n_iter,
-                                regularize=False, low_dim=False,
+                                regularize=False, low_dim=low_dim,
                                 spectrum_norm=False, retrain_interval=1, acq=method, 
                                 verbose=True, lr=1e-4, name=name, 
                                 return_result=True, retrain_nn=True,
                                 plot_result=True, save_result=True, save_path=f'./res/baseline/tmlr/{method}', 
                                 fix_seed=True,  pretrained=False, ae_loc=None, 
-                                exact_gp=False, constrain_noise=constrain_noise,
+                                exact_gp=exact_gp, constrain_noise=constrain_noise,
                                 interpolate=interpolate,)
         
     elif method == 'cbo':
 
+        # regret = cbo_multi(x_tensor, y_tensor, c_tensor_list, 
+        #             constraint_threshold_list=constraint_threshold_list, constraint_confidence_list=constraint_confidence_list,
+        #             n_init=n_init, n_repeat=n_repeat, train_times=train_times, regularize=False, low_dim=False,
+        #             spectrum_norm=False, retrain_interval=1, n_iter=n_iter, filter_interval=1, acq="ci", 
+        #             ci_intersection=True, verbose=True, lr=1e-4, name=name, return_result=True, retrain_nn=True,
+        #             plot_result=True, save_result=True, save_path='./res/cbo/tmlr', fix_seed=True,  pretrained=False, ae_loc=None, 
+        #             _minimum_pick = 10, _delta = 0.01, beta=0.5, filter_beta=0.5, exact_gp=False, constrain_noise=constrain_noise, 
+        #             local_model=False,  interpolate=interpolate,)
         regret = cbo_multi(x_tensor, y_tensor, c_tensor_list, 
                     constraint_threshold_list=constraint_threshold_list, constraint_confidence_list=constraint_confidence_list,
-                    n_init=n_init, n_repeat=n_repeat, train_times=train_times, regularize=False, low_dim=False,
+                    n_init=n_init, n_repeat=n_repeat, train_times=train_times, regularize=False, low_dim=low_dim,
                     spectrum_norm=False, retrain_interval=1, n_iter=n_iter, filter_interval=1, acq="ci", 
-                    ci_intersection=True, verbose=True, lr=1e-4, name=name, return_result=True, retrain_nn=True,
+                    ci_intersection=False, verbose=True, lr=1e-4, name=name, return_result=True, retrain_nn=True,
                     plot_result=True, save_result=True, save_path='./res/cbo/tmlr', fix_seed=True,  pretrained=False, ae_loc=None, 
-                    _minimum_pick = 10, _delta = 0.01, beta=2, filter_beta=2, exact_gp=False, constrain_noise=constrain_noise, 
+                    _minimum_pick = 10, _delta = 0.01, beta=10, filter_beta=10, exact_gp=exact_gp, constrain_noise=constrain_noise, 
                     local_model=False,  interpolate=interpolate,)
 
     elif method =='scbo':
@@ -146,11 +154,11 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         # print(f"Before Optimization the best value is: {max_reward:.4f} / global opt {max_global:.4f} := regret {max_global - max_reward:.4f} ")
         regret = baseline_scbo(x_tensor=x_tensor, y_func=y_func, c_func_list=c_func_list,
             max_global=max_global, lb=cbo_factory.lb, ub=cbo_factory.ub, dim=cbo_factory.dim,
-            n_init=n_init, n_repeat=n_repeat, train_times=train_times, low_dim=True,
+            n_init=n_init, n_repeat=n_repeat, train_times=train_times, low_dim=low_dim,
             retrain_interval=1, n_iter=n_iter,
             verbose=True, lr=lr, name=name, return_result=True, 
             plot_result=True, save_result=True, save_path='./res/scbo/tmlr', fix_seed=True,
-            exact_gp=False, constrain_noise=constrain_noise, interpolate=interpolate)
+            exact_gp=exact_gp, constrain_noise=constrain_noise, interpolate=interpolate)
 
         # with warnings.catch_warnings():
         #     warnings.simplefilter("ignore")
@@ -180,23 +188,33 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
 
 
 if __name__ == "__main__":
+    # n_repeat = 10
+    # n_init = 10
+    # n_iter = 50
+    # train_times = 50
+    # n_repeat = 2
     n_repeat = 10
-    n_init = 10
-    n_iter = 50
+    n_init = 5
+    # n_iter = 30
+    n_iter = 100
+    # train_times = 5
+    train_times=10
+
     # experiment(n_init=5, method='qei')
     # experiment(n_init=5, method='ts')
     # experiment(n_init=5, method='cmes-ibo')
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=40, method='scbo')
     # experiment(n_init=5, method='cbo', n_iter=200)
-    # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, method='cbo')
-    # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, method='qei')
-    # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, method='ts')
-    # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, method='cmes-ibo')
-    # experiment(exp='ackley_5d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, method='cbo')
-    # experiment(exp='ackley_5d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, method='qei')
-    # experiment(exp='ackley_5d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, method='ts')
-    # experiment(exp='ackley_5d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, method='cmes-ibo')
-    # experiment(exp='ackley_5d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, method='scbo')
+    # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='cbo')
+    experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='qei')
+    # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='ts')
+    experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='cmes-ibo')
+    experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='scbo')
+    experiment(exp='ackley_5d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='cbo')
+    experiment(exp='ackley_5d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='qei')
+    # experiment(exp='ackley_5d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='ts')
+    experiment(exp='ackley_5d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter,train_times=train_times,  method='cmes-ibo')
+    experiment(exp='ackley_5d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='scbo')
     # experiment(exp='rosenbrock_5d', n_init=10, n_repeat=1, n_iter=20, method='qei', constrain_noise=True)
     # experiment(exp='rosenbrock_5d', n_init=10, n_repeat=1, n_iter=20, method='cmes-ibo', constrain_noise=True)
     # experiment(exp='rosenbrock_5d', n_init=10, n_repeat=1, n_iter=20, method='scbo', constrain_noise=True)
@@ -206,7 +224,7 @@ if __name__ == "__main__":
     #     experiment(exp='rosenbrock_4d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, method=method, constrain_noise=True)
     
     # experiment(n_init=10, method='cbo')
-    experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method='scbo', constrain_noise=True)
+    # experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method='scbo', constrain_noise=True)
     # experiment(exp='water_converter_32d_neg', n_init=20, n_repeat=10, n_iter=100, method='cbo', constrain_noise=True)
     # experiment(exp='water_converter_32d_neg', n_init=20, n_repeat=10, n_iter=100, method='qei', constrain_noise=True)
     # experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method='cmes-ibo', constrain_noise=True)
