@@ -36,8 +36,8 @@ def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidenc
         roi_noise_constraint = None
     _minimum_pick = min(_minimum_pick, n_init)
     c_threshold = norm.ppf(constraint_confidence, loc=constraint_threshold, scale=1)
-    feasibility_filter = c_tensor > c_threshold
-    assert sum(feasibility_filter) > 0
+    feasibility_filter_real = c_tensor > c_threshold
+    assert sum(feasibility_filter_real) > 0
     name = name if low_dim else name+'-hd'
     feasible_filter = feasible_filter_gen([c_tensor], [c_threshold])
     max_val = y_tensor[feasible_filter].max()
@@ -122,15 +122,26 @@ def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidenc
                     assert c_max_test_x_lcb.size(0) == data_size and c_min_test_x_ucb.size(0) == data_size
                     
                 # filtering with another CI
+                _max_growth = 4
+                _min_roi = min(100, feasible_filter.sum())
+                _rate_growth = 1.2
                 if default_fbeta:
                     filter_beta = beta
-                _f_filter_lcb, _f_filter_ucb = beta_CI(f_lcb, f_ucb, filter_beta)
-                _c_filter_lcb, _c_filter_ucb = beta_CI(c_lcb, c_ucb, filter_beta)
+                _filter_beta = filter_beta
+                for i in range(_max_growth):
+                    _f_filter_lcb, _f_filter_ucb = beta_CI(f_lcb, f_ucb, _filter_beta)
+                    _c_filter_lcb, _c_filter_ucb = beta_CI(c_lcb, c_ucb, _filter_beta)
+                    
+                    c_sci_filter = _c_filter_lcb >= c_threshold
+                    c_roi_filter = _c_filter_ucb >= c_threshold
+                    if sum(c_roi_filter) > _min_roi:
+                        break
+                    else:
+                        _filter_beta = _filter_beta * _rate_growth
+                        
                 
-                c_sci_filter = _c_filter_lcb >= c_threshold
-                c_roi_filter = _c_filter_ucb >= c_threshold
                 c_uci_filter = c_roi_filter.logical_xor(c_sci_filter) # Q: do we want real uci? it could be two strict
-                f_roi_threshold = _f_filter_lcb[c_sci_filter.squeeze()].max() if torch.any(c_sci_filter) else _f_filter_lcb[feasibility_filter.squeeze()].min()
+                f_roi_threshold = _f_filter_lcb[c_sci_filter.squeeze()].max() if torch.any(c_sci_filter) else -torch.inf
                 f_roi_filter = _f_filter_ucb >= f_roi_threshold
                 roi_filter = c_roi_filter.logical_and(f_roi_filter)
 
@@ -341,15 +352,18 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
     c_threshold_list = [norm.ppf(constraint_confidence, loc=constraint_threshold, scale=1) 
                         for constraint_confidence, constraint_threshold in zip(constraint_confidence_list, constraint_threshold_list)]
     c_num = len(c_tensor_list)
-    feasibility_filter = c_tensor_list[0] > c_threshold_list[0]
+    feasibility_filter_real = c_tensor_list[0] > c_threshold_list[0]
     for c_idx in range(c_num):
-        feasibility_filter.logical_and(c_tensor_list[c_idx] > c_threshold_list[c_idx])
+        feasibility_filter_real.logical_and(c_tensor_list[c_idx] > c_threshold_list[c_idx])
     
-    assert torch.any(feasibility_filter)
+    assert torch.any(feasibility_filter_real)
     name = name if low_dim else name+'-hd'
 
     feasible_filter = feasible_filter_gen(c_tensor_list, c_threshold_list)
     max_val = y_tensor[feasible_filter].max()
+    max_pos = torch.arange(x_tensor.size(0))
+    max_pos = max_pos[feasible_filter]
+    max_pos = max_pos[y_tensor[feasible_filter].argmax()]
     reg_record = np.zeros([n_repeat, n_iter])
     ratio_record = np.zeros([n_repeat, n_iter])
     max_LUCB_interval_record = np.zeros([n_repeat, 3, n_iter]) # 0 - Global, 1 - ROI, 2 -- intersection
@@ -450,29 +464,45 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
                     filter_beta = beta
                 observed_num = observed.sum()
                 # filter_on_intersect = default_fbeta and _minimum_pick < observed_num
+                _max_growth = 4
+                _min_c_roi = min(100, feasible_filter.sum())
+                _rate_growth = 1.2
+                _filter_beta = filter_beta
                 filter_on_intersect = False
-                if filter_on_intersect:
-                    _f_filter_lcb, _f_filter_ucb = f_max_test_x_lcb, f_min_test_x_ucb
-                    _c_filter_lcb_list, _c_filter_ucb_list = c_max_test_x_lcb_list, c_min_test_x_ucb_list
-                else:
-                    _f_filter_lcb, _f_filter_ucb = beta_CI(f_lcb, f_ucb, filter_beta)
-                    _c_filter_lcb_list, _c_filter_ucb_list = [None for _ in range(c_num)], [None for _ in range(c_num)]
-                    for c_idx in range(c_num):
-                        _c_filter_lcb_list[c_idx], _c_filter_ucb_list[c_idx] = beta_CI(c_lcb_list[c_idx], c_ucb_list[c_idx], filter_beta)
+                for i in range(_max_growth):
+                    if filter_on_intersect:
+                        _f_filter_lcb, _f_filter_ucb = f_max_test_x_lcb, f_min_test_x_ucb
+                        _c_filter_lcb_list, _c_filter_ucb_list = c_max_test_x_lcb_list, c_min_test_x_ucb_list
+                    else:
+                        _f_filter_lcb, _f_filter_ucb = beta_CI(f_lcb, f_ucb, _filter_beta)
+                        _c_filter_lcb_list, _c_filter_ucb_list = [None for _ in range(c_num)], [None for _ in range(c_num)]
+                        for c_idx in range(c_num):
+                            _c_filter_lcb_list[c_idx], _c_filter_ucb_list[c_idx] = beta_CI(c_lcb_list[c_idx], c_ucb_list[c_idx], _filter_beta)
+                        
                     
-                
-                c_sci_filter_list, c_roi_filter_list, c_uci_filter_list = [None for _ in range(c_num)], [None for _ in range(c_num)], [None for _ in range(c_num)]
-                
-                for c_idx in range(c_num):
-                    c_sci_filter_list[c_idx] = _c_filter_lcb_list[c_idx] >= c_threshold_list[c_idx]
-                    c_roi_filter_list[c_idx] = _c_filter_ucb_list[c_idx] >= c_threshold_list[c_idx]
-                    c_uci_filter_list[c_idx] = c_roi_filter_list[c_idx].logical_xor(c_sci_filter_list[c_idx]) 
+                    c_sci_filter_list, c_roi_filter_list, c_uci_filter_list = [None for _ in range(c_num)], [None for _ in range(c_num)], [None for _ in range(c_num)]
+                    
 
-                c_sci_filter = c_sci_filter_list[0].clone() # single c_sci
-                for c_idx in range(c_num):
-                    c_sci_filter = c_sci_filter.logical_and(c_sci_filter_list[c_idx])
+                    for c_idx in range(c_num):
+                        c_sci_filter_list[c_idx] = _c_filter_lcb_list[c_idx] >= c_threshold_list[c_idx]
+                        c_roi_filter_list[c_idx] = _c_filter_ucb_list[c_idx] >= c_threshold_list[c_idx]
+                        c_uci_filter_list[c_idx] = c_roi_filter_list[c_idx].logical_xor(c_sci_filter_list[c_idx]) 
 
-                f_roi_threshold = _f_filter_lcb[c_sci_filter.squeeze()].max() if torch.any(c_sci_filter) else  _f_filter_lcb[feasibility_filter.squeeze()].min()          # single f_roi
+                    c_sci_filter = c_sci_filter_list[0].clone() # single c_sci
+                    for c_idx in range(c_num):
+                        c_sci_filter = c_sci_filter.logical_and(c_sci_filter_list[c_idx])
+                    
+                    # check if filter_beta is appropriate
+                    _c_roi_filter = c_roi_filter_list[0].clone()
+                    for c_roi_filter in c_roi_filter_list: 
+                        _c_roi_filter = _c_roi_filter.logical_and(c_roi_filter)
+                    _c_roi_filter_size = sum(_c_roi_filter)
+                    if _c_roi_filter_size > _min_c_roi:
+                        break
+                    else:
+                        _filter_beta = _filter_beta * _rate_growth
+
+                f_roi_threshold = _f_filter_lcb[c_sci_filter.squeeze()].max() if torch.any(c_sci_filter) else -torch.inf         # single f_roi
                 f_roi_filter = _f_filter_ucb >= f_roi_threshold
 
 
@@ -569,6 +599,8 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
                 _iterator_info['ROI Y range'] = f"{roi_y_min:.2f}, {roi_y_max:.2f}"
                 _iterator_info['filter_on_intersect'] = filter_on_intersect
                 _iterator_info['beta'] = beta
+                _iterator_info['Acq Picked'] = f"c{_cbo_m._c_acq_list_max_value:.2e}, f{_cbo_m._f_acq_value:.2e}"
+                _iterator_info['UCB Optimum'] = f"{_roi_f_ucb[max_pos]:.2e}"
                 iterator.set_postfix(_iterator_info)
 
                 ucb_filtered_idx = util_array[roi_filter]
@@ -684,11 +716,11 @@ def baseline_cbo_m(x_tensor, y_tensor, c_tensor_list,
     c_threshold_list = [norm.ppf(constraint_confidence, loc=constraint_threshold, scale=1) 
                         for constraint_confidence, constraint_threshold in zip(constraint_confidence_list, constraint_threshold_list)]
     c_num = len(c_tensor_list)
-    feasibility_filter = c_tensor_list[0] > c_threshold_list[0]
+    feasibility_filter_real = c_tensor_list[0] > c_threshold_list[0]
     for c_idx in range(c_num):
-        feasibility_filter.logical_and(c_tensor_list[c_idx] > c_threshold_list[c_idx])
+        feasibility_filter_real.logical_and(c_tensor_list[c_idx] > c_threshold_list[c_idx])
     
-    assert sum(feasibility_filter) > 0
+    assert sum(feasibility_filter_real) > 0
     name = name if low_dim else name+'-hd'
 
     feasible_filter = feasible_filter_gen(c_tensor_list, c_threshold_list)

@@ -212,17 +212,20 @@ class Constrained_Data_Factory(Data_Factory):
         Note: due to earlier problem, it is actually 4d. but feeded to a 10 d function. and only on diagonal.
         '''
         self._name = 'Ackely'
-        dim = 4
+        dim = 5
         self.dim = dim
         self.lb, self.ub = torch.ones(dim) * -5, torch.ones(dim) * 3
         self.lb, self.ub =self.lb.to(device=device, dtype=dtype), self.ub.to(device=device, dtype=dtype)
-        self.objective = lambda x: Ackley(dim=10)(x) # deliberately set to be 10, still work on dim = 1
-        self.c_func1 = lambda x: -torch.sum(x) # sum x <= 0
+        # self.objective = lambda x: Ackley(dim=10)(x) # deliberately set to be 10, still work on dim specified
+        self.objective = lambda x: Ackley(dim=dim)(x) 
+        # self.c_func1 = lambda x: -torch.sum(x) # sum x <= 0
+        self.c_func1 = lambda x: -torch.max(x**2)+3**2 # max x**2 <= 9
         self.c_func1_scbo = lambda x: -self.c_func1(x)
-        self.c_func2 = lambda x: - torch.linalg.vector_norm(x-torch.ones(dim)) + 4 # norm x < 5
+        # self.c_func2 = lambda x: - torch.linalg.vector_norm(x-torch.ones(dim))  + 4 # norm x < 5
+        self.c_func2 = lambda x:  (torch.linalg.vector_norm(x-torch.ones(dim)) - 5.5)**2 - 1.**2 # norm x < 4 or > 7
         self.c_func2_scbo = lambda x: -self.c_func2(x)
         self.c_func_list = [self.c_func1_scbo, self.c_func2_scbo]
-        self.x_tensor = self._generate_x_tensor(dim=1, num=self._num_pts, seed=2).to(device=device, dtype=dtype)
+        self.x_tensor = self._generate_x_tensor(dim=dim, num=self._num_pts, seed=2).to(device=device, dtype=dtype)
         self.x_tensor = unnormalize(self.x_tensor, (torch.zeros(dim).to(device=device, dtype=dtype), torch.ones(dim).to(device=device, dtype=dtype)))
         self.x_tensor_range = unnormalize(self.x_tensor, (self.lb, self.ub))
         self.y_tensor = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.objective, self.x_tensor).unsqueeze(-1)
@@ -232,6 +235,7 @@ class Constrained_Data_Factory(Data_Factory):
         self.constraint_threshold_list = [0, 0]
         self.constraint_confidence_list = [0.5, 0.5]
         self.feasible_filter = feasible_filter_gen(self.c_tensor_list, self.constraint_threshold_list)
+        self.c_portion = (sum(self.feasible_filter) / self.feasible_filter.size(0)).detach().item()
 
         assert torch.any(self.feasible_filter)
 

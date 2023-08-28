@@ -525,6 +525,8 @@ class DK_BO_AE_C_M():
                         _c_acq_list[c_idx] = self.c_model_list[c_idx].acq_val[_candidate_idx_c_list[c_idx]]
                 _c_acq_list_max = torch.max(_c_acq_list, dim=0)
 
+                self._c_acq_list_max_value = _c_acq_list_max.values 
+                self._f_acq_value = _f_acq
                 if _c_acq_list_max.values > _f_acq:
                     assert _c_acq_list_max.values > float("-inf")
                     _c_idx = _c_acq_list_max.indices
@@ -532,6 +534,7 @@ class DK_BO_AE_C_M():
                 else:
                     candidate_idx = util_array[self.roi_filter][_candidate_idx_f]
 
+            self._candidate_idx = candidate_idx
             # update obs
             _candidate_idx_list[i] = candidate_idx
             self.update_obs(candidate_idx)
