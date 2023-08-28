@@ -14,7 +14,9 @@ EXPS = ['rastrigin_1d', 'rastrigin_10d', 'ackley_5d', 'ackley_10d','rosenbrock_5
         'water_converter_32d', 'water_converter_32d_neg', 'water_converter_32d_neg_3c', 'gpu_performance_16d']
 METHODs = ['cbo',  'qei', 'scbo', 'ts','random', 'cmes-ibo', ]
 
-def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_times:int=50, n_iter:int=20, n_init:int=10, constrain_noise:bool=True)->None:
+
+def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_times:int=50, n_iter:int=20, n_init:int=10, 
+               constrain_noise:bool=False, interpolate:bool=True, c_portion:float=None)->None:
     exp = exp.lower()
     method = method.lower()
     assert exp in EXPS
@@ -25,10 +27,16 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
     if exp == 'rastrigin_1d': # rastrigin 1D
         cbo_factory = Constrained_Data_Factory(num_pts=20000)
         scbo = 'scbo' in method
-        if scbo:
-            x_tensor, y_func, c_func_list = cbo_factory.rastrigin_1D(scbo_format=scbo)
+        if not c_portion is None: # scanning the portion
+            if scbo:
+                x_tensor, y_func, c_func_list = cbo_factory.rastrigin_1D(scbo_format=scbo, c_scan=True, c_portion=c_portion)
+            else:
+                x_tensor, y_tensor, c_tensor_list = cbo_factory.rastrigin_1D(scbo_format=scbo, c_scan=True, c_portion=c_portion)
         else:
-            x_tensor, y_tensor, c_tensor_list = cbo_factory.rastrigin_1D(scbo_format=scbo)
+            if scbo:
+                x_tensor, y_func, c_func_list = cbo_factory.rastrigin_1D(scbo_format=scbo)
+            else:
+                x_tensor, y_tensor, c_tensor_list = cbo_factory.rastrigin_1D(scbo_format=scbo)
         constraint_threshold_list, constraint_confidence_list = cbo_factory.constraint_threshold_list, cbo_factory.constraint_confidence_list
         feasible_filter = cbo_factory.feasible_filter
         y_tensor = cbo_factory.y_tensor
@@ -113,9 +121,10 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
                                 spectrum_norm=False, retrain_interval=1, acq=method, 
                                 verbose=True, lr=1e-4, name=name, 
                                 return_result=True, retrain_nn=True,
-                                plot_result=True, save_result=True, save_path=f'./res/baseline/{method}', 
+                                plot_result=True, save_result=True, save_path=f'./res/baseline/tmlr/{method}', 
                                 fix_seed=True,  pretrained=False, ae_loc=None, 
-                                exact_gp=False, constrain_noise=constrain_noise,)
+                                exact_gp=False, constrain_noise=constrain_noise,
+                                interpolate=interpolate,)
         
     elif method == 'cbo':
 
@@ -124,8 +133,9 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
                     n_init=n_init, n_repeat=n_repeat, train_times=train_times, regularize=False, low_dim=False,
                     spectrum_norm=False, retrain_interval=1, n_iter=n_iter, filter_interval=1, acq="ci", 
                     ci_intersection=True, verbose=True, lr=1e-4, name=name, return_result=True, retrain_nn=True,
-                    plot_result=True, save_result=True, save_path='./res/cbo', fix_seed=True,  pretrained=False, ae_loc=None, 
-                    _minimum_pick = 10, _delta = 0.01, beta=2, filter_beta=2, exact_gp=False, constrain_noise=constrain_noise, local_model=False)
+                    plot_result=True, save_result=True, save_path='./res/cbo/tmlr', fix_seed=True,  pretrained=False, ae_loc=None, 
+                    _minimum_pick = 10, _delta = 0.01, beta=2, filter_beta=2, exact_gp=False, constrain_noise=constrain_noise, 
+                    local_model=False,  interpolate=interpolate,)
 
     elif method =='scbo':
         init_feasible_reward = y_tensor[:n_init][feasible_filter[:n_init]]
@@ -139,8 +149,8 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
             n_init=n_init, n_repeat=n_repeat, train_times=train_times, low_dim=True,
             retrain_interval=1, n_iter=n_iter,
             verbose=True, lr=lr, name=name, return_result=True, 
-            plot_result=True, save_result=True, save_path='./res/scbo', fix_seed=True,
-            exact_gp=False, constrain_noise=constrain_noise, )
+            plot_result=True, save_result=True, save_path='./res/scbo/tmlr', fix_seed=True,
+            exact_gp=False, constrain_noise=constrain_noise, interpolate=interpolate)
 
         # with warnings.catch_warnings():
         #     warnings.simplefilter("ignore")

@@ -136,11 +136,12 @@ class Constrained_Data_Factory(Data_Factory):
         y_tensor or f_func, 
         list of c_tensor or list of c_func for SCBO < 0
     """
-    def __init__(self, num_pts:int = 20000) -> None:
+    def __init__(self, num_pts:int = 20000, venue:str='tmlr') -> None:
         super().__init__()
         self.dtype = torch.float
         self.device = torch.device('cpu')
         self._num_pts = num_pts
+        self._venue = 'tmlr'
     
     def _generate_x_tensor(self, dim:int, num:int, seed:int=0) -> tensor:
         '''
@@ -162,9 +163,11 @@ class Constrained_Data_Factory(Data_Factory):
         index = torch.argmin(diff.sum(dim=-1))
         return data[index, reward_idx]
 
-    def rastrigin_1D(self, scbo_format=False) -> List[tensor]:
+    def rastrigin_1D(self, scbo_format:bool=False, **kwargs) -> List[tensor]:
         """https://www.sfu.ca/~ssurjano/rastr.html"""
         self._name = 'Rastrigin 1D'
+        scan_c = kwargs.get('scan_constraint', False) # if moving the threshold
+
         dim = 1
         self.dim = dim
         self.lb, self.ub = torch.ones(dim) * -5, torch.ones(dim) * 5
@@ -180,8 +183,15 @@ class Constrained_Data_Factory(Data_Factory):
         self.y_tensor = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.objective, self.x_tensor).unsqueeze(-1)
         self.c_tensor1 = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.c_func1, self.x_tensor).unsqueeze(-1)
         self.c_tensor_list = [self.c_tensor1]
-        self.constraint_threshold_list = [0]
+
+        # feasible region identification
         self.constraint_confidence_list = [0.5]
+        if scan_c:
+            self.c_portion = kwargs.get('constrained_portion', .1) # portion of feasible region
+            self.constraint_threshold_list = [np.quantile(self.c_tensor1, 1 - self.c_portion)] 
+        else:
+            self.constraint_threshold_list = [0]
+            c_portion = sum(self.c_tensor1 > 0) / self.c_tensor1.size(0)
         self.feasible_filter = feasible_filter_gen(self.c_tensor_list, self.constraint_threshold_list)
 
         assert torch.any(self.feasible_filter)
@@ -196,7 +206,7 @@ class Constrained_Data_Factory(Data_Factory):
         else:
             return self.x_tensor, self.objective, self.c_func_list
         
-    def ackley_5d(self, scbo_format=False) -> List[tensor]:
+    def ackley_5d(self, scbo_format:bool=False) -> List[tensor]:
         '''
         Note: due to earlier problem, it is actually 4d. but feeded to a 10 d function. and only on diagonal.
         '''
@@ -234,18 +244,24 @@ class Constrained_Data_Factory(Data_Factory):
         else:
             return self.x_tensor, self.objective, self.c_func_list
 
-    def rosenbrock_5d(self, scbo_format=False) -> List[tensor]:
+    def rosenbrock_5d(self, scbo_format:bool=False, standardization:bool=True) -> List[tensor]:
         self._name = 'Rosenbrock_3C'
         dim = 2
         self.dim = dim
         self.lb, self.ub = torch.ones(dim) * -3, torch.ones(dim) * 5
         self.lb, self.ub =self.lb.to(device=device, dtype=dtype), self.ub.to(device=device, dtype=dtype)
-        self.objective = lambda x: -0.5 * Ackley(dim=dim)(x) # deliberately set to be 10, still work on dim = 1
-        self.c_func1 = lambda x: -DixonPrice(dim=dim)(x)/(dim*100) + .1
+        if standardization:
+            self.objective = lambda x: -0.5 * Ackley(dim=dim)(x) # deliberately set to be 10, still work on dim = 1
+            self.c_func1 = lambda x: -DixonPrice(dim=dim)(x)/(dim*100) + .1
+            self.c_func2 = lambda x: -Levy(dim=dim)(x)/(dim*100) + .1
+            self.c_func3 = lambda x: torch.linalg.vector_norm(x, dim=-1)**(1/2) - (1.3)**(1/2)
+        else:
+            self.objective = lambda x: Ackley(dim=dim)(x) # deliberately set to be 10, still work on dim = 1
+            self.c_func1 = lambda x: -DixonPrice(dim=dim)(x)
+            self.c_func2 = lambda x: -Levy(dim=dim)(x)
+            self.c_func3 = lambda x: torch.linalg.vector_norm(x, dim=-1)**(1/2) - (1.3)**(1/2)
         self.c_func1_scbo = lambda x: -self.c_func1(x)
-        self.c_func2 = lambda x: -Levy(dim=dim)(x)/(dim*100) + .1
         self.c_func2_scbo = lambda x: -self.c_func2(x)
-        self.c_func3 = lambda x: torch.linalg.vector_norm(x, dim=-1)**(1/2) - (1.3)**(1/2)
         self.c_func3_scbo = lambda x: -self.c_func3(x)
         self.c_func_list = [self.c_func1_scbo, self.c_func2_scbo, self.c_func3_scbo]
         self.x_tensor = self._generate_x_tensor(dim=dim, num=self._num_pts, seed=0).to(device=device, dtype=dtype)
@@ -272,7 +288,7 @@ class Constrained_Data_Factory(Data_Factory):
         else:
             return self.x_tensor, self.objective, self.c_func_list
 
-    def rosenbrock_4d(self, scbo_format=False) -> List[tensor]:
+    def rosenbrock_4d(self, scbo_format:bool=False) -> List[tensor]:
         self._name = 'Rosenbrock_2C'
         dim = 10
         self.dim = dim
@@ -310,7 +326,7 @@ class Constrained_Data_Factory(Data_Factory):
         else:
             return self.x_tensor, self.objective, self.c_func_list
 
-    def water_converter_32d(self, scbo_format=False) -> List[tensor]:
+    def water_converter_32d(self, scbo_format:bool=False) -> List[tensor]:
         '''
         All subreward > 87682.7047, actually 2c
         '''
@@ -451,7 +467,7 @@ class Constrained_Data_Factory(Data_Factory):
         plt.legend(fontsize=fontsize/1.4)
         plt.xlabel('X')
         plt.ylabel("Y")
-        plt.savefig(f"./res/illustration/{self._name}")
+        plt.savefig(f"./res/illustration/{self._venue}_{self._name}_P{self.c_portion:.0%}")
         plt.close()
 
 
