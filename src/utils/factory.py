@@ -191,7 +191,7 @@ class Constrained_Data_Factory(Data_Factory):
             self.constraint_threshold_list = [np.quantile(self.c_tensor1, 1 - self.c_portion)] 
         else:
             self.constraint_threshold_list = [0]
-            c_portion = sum(self.c_tensor1 > 0) / self.c_tensor1.size(0)
+            self.c_portion = (sum(self.c_tensor1 > 0) / self.c_tensor1.size(0)).detach().item()
         self.feasible_filter = feasible_filter_gen(self.c_tensor_list, self.constraint_threshold_list)
 
         assert torch.any(self.feasible_filter)
@@ -404,7 +404,6 @@ class Constrained_Data_Factory(Data_Factory):
         else:
             return self.x_tensor, self.objective, self.c_func_list
 
-
     def water_converter_32d_neg_3c(self, scbo_format=False) -> List[tensor]:
         '''
         All subreward < 92000
@@ -449,6 +448,67 @@ class Constrained_Data_Factory(Data_Factory):
             return self.x_tensor, self.objective, self.c_func_list
 
 
+    def RE2_4_3(self, scbo_format:bool=False,):
+        """An easy-to-use real-world multi-objective optimization problem suite - ScienceDirect
+            [https://www.sciencedirect.com/science/article/pii/S1568494620300181#appSB]
+            Pressure Vessel Design Problem.
+        """
+        self._name = 'vessel_4D'
+
+        dim = 4
+        self.dim = dim
+        self.lb, self.ub = torch.tensor([1, 1, 10, 10]), torch.tensor([100, 100, 200, 240])
+        self.lb, self.ub =self.lb.to(device=device, dtype=dtype), self.ub.to(device=device, dtype=dtype)
+        
+        self.objective = lambda x: 0.6224*x[0]*x[2]*x[3] + 1.7781*x[0]*x[2]*x[2] + 3.1661*x[0]*x[0]*x[3] + 19.84*x[0]*x[0]*x[2]
+        # self.c_func1 = lambda x: -(x+3)**2 + 0.64  # |x - -2| < 0.5
+        self.c_func1 = lambda x: x[0] - 0.0193*x[2]
+        self.c_func1_scbo = lambda x: -self.c_func1(x)
+        self.c_func1 = lambda x: x[0] - 0.0193*x[2]
+        self.c_func1_scbo = lambda x: -self.c_func1(x)
+        self.c_func1 = lambda x: x[0] - 0.0193*x[2]
+        self.c_func1_scbo = lambda x: -self.c_func1(x)
+
+        self.c_func_list = [self.c_func1_scbo]
+        self.x_tensor = self._generate_x_tensor(dim=1, num=self._num_pts).to(device=device, dtype=dtype)
+        self.x_tensor_range = unnormalize(self.x_tensor, (self.lb, self.ub))
+        self.y_tensor = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.objective, self.x_tensor).unsqueeze(-1)
+        self.c_tensor1 = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.c_func1, self.x_tensor).unsqueeze(-1)
+        self.c_tensor_list = [self.c_tensor1]
+
+        # feasible region identification
+        self.constraint_confidence_list = [0.5]
+        self.constraint_threshold_list = [0]
+        self.feasible_filter = feasible_filter_gen(self.c_tensor_list, self.constraint_threshold_list)
+
+        assert torch.any(self.feasible_filter)
+
+        __feasible_y = torch.where(self.feasible_filter, self.y_tensor.squeeze(), float('-inf'))
+        self.maximum = __feasible_y.max()
+        self.max_arg = __feasible_y.argmax()
+
+        if not scbo_format:
+            return self.x_tensor_range, self.y_tensor, self.c_tensor_list
+            # return self.x_tensor, self.y_tensor, self.c_tensor_list
+        else:
+            return self.x_tensor, self.objective, self.c_func_list
+        return
+    
+    def RE2_3_5(self, scbo_format:bool=False,):
+        """An easy-to-use real-world multi-objective optimization problem suite - ScienceDirect
+            [https://www.sciencedirect.com/science/article/pii/S1568494620300181#appSB]
+            Coil Compression Spring Design.
+        """
+
+        return
+    
+    def RE9_7_1(self, scbo_format:bool=False,):
+        """An easy-to-use real-world multi-objective optimization problem suite - ScienceDirect
+            [https://www.sciencedirect.com/science/article/pii/S1568494620300181#appSB]
+            Car Cab Design.
+        """
+        return
+
     def visualize_1d(self, if_norm:bool=False):
         fontsize = 25
         plt.figure(figsize=[12, 10])
@@ -467,7 +527,12 @@ class Constrained_Data_Factory(Data_Factory):
         plt.legend(fontsize=fontsize/1.4)
         plt.xlabel('X')
         plt.ylabel("Y")
-        plt.savefig(f"./res/illustration/{self._venue}_{self._name}_P{self.c_portion:.0%}")
+        if hasattr(self, 'c_portion'):
+            _fig_dir = f"./res/illustration/{self._venue}_{self._name}_P{self.c_portion:.0%}"
+
+        else:
+            _fig_dir = f"./res/illustration/{self._venue}_{self._name}"
+        plt.savefig(_fig_dir)
         plt.close()
 
 
