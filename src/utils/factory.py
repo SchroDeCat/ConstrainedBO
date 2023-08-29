@@ -506,8 +506,70 @@ class Constrained_Data_Factory(Data_Factory):
             [https://www.sciencedirect.com/science/article/pii/S1568494620300181#appSB]
             Coil Compression Spring Design.
         """
+        self._name = 'spring_3D_6C'
 
+        dim = 3
+        c_num = 6
+        self.dim = dim
+        self.lb, self.ub = torch.tensor([1, .6, .009, ]), torch.tensor([70, 30, .5])
+        self.lb, self.ub =self.lb.to(device=device, dtype=dtype), self.ub.to(device=device, dtype=dtype)
+        # feasible_vals = np.array([0.009, 0.0095, 0.0104, 0.0118, 0.0128, 0.0132, 0.014, 0.015, 
+        # 0.0162, 0.0173, 0.018, 0.02, 0.023, 0.025, 0.028, 0.032, 0.035, 0.041, 0.047, 0.054, 
+        # 0.063, 0.072, 0.08, 0.092, 0.105, 0.12, 0.135, 0.148, 0.162, 0.177, 0.192, 0.207, 
+        # 0.225, 0.244, 0.263, 0.283, 0.307, 0.331, 0.362, 0.394, 0.4375, 0.5])
+        
+        # predefined variables
+        F_MAX = 1000
+        S = 189000
+        L_MAX = 14
+        D_MIN = .2
+        D_MAX = 3
+        F_P = 300
+        SIMGA_PM = 6
+        SIMGA_W = 1.25
+        G = 1.15e7
+
+        # auxiliary funcs
+        C_F = lambda x: ((4.0 * (x[1] / x[2]) - 1) / (4.0 * (x[1] / x[2]) - 4)) + (0.615 * x[2] / x[1])
+        K = lambda x: (G * (x[2]**4)) / (8 * x[0] * (x[1]**3))
+        SIMGA_P = lambda x: F_P / K(x)
+        L_F = lambda x: (F_MAX / K(x)) + 1.05 *  (x[0] + 2) * x[2]
+
+        # obj and constraints
+        self.objective = lambda x: (np.pi * np.pi * x[1] * x[2] * x[2] * (x[0] + 2)) / 4.0
+        self._c_func_list = [None for _ in range(c_num)]
+        self._c_func_list[0] = lambda x: -((8 * C_F(x) * F_MAX * x[1]) / (np.pi * x[2] * x[2] * x[2])) + S
+        self._c_func_list[1] = lambda x: -L_F(x) + L_MAX
+        self._c_func_list[2] = lambda x: -3 + (x[1] / x[2])
+        self._c_func_list[3] = lambda x: -SIMGA_P(x) + SIMGA_PM
+        self._c_func_list[4] = lambda x: -SIMGA_P(x) - ((F_MAX - F_P) / K(x)) - 1.05 * (x[0] + 2) * x[2] + L_F(x)
+        self._c_func_list[5] = lambda x: SIMGA_W- ((F_MAX - F_P) / K(x))
+
+        
+        self.c_func_list = [lambda x: -c_func(x)  for c_func in self._c_func_list]
+        self.x_tensor = self._generate_x_tensor(dim=1, num=self._num_pts).to(device=device, dtype=dtype)
+        self.x_tensor_range = unnormalize(self.x_tensor, (self.lb, self.ub))
+        self.y_tensor = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.objective, self.x_tensor).unsqueeze(-1)
+        self.c_tensor_list = [Constrained_Data_Factory.evaluate_func(self.lb, self.ub, c_func, self.x_tensor).unsqueeze(-1) for c_func in self._c_func_list]
+
+        # feasible region identification
+        self.constraint_confidence_list = [0.5 for _ in range(c_num)]
+        self.constraint_threshold_list = [0 for _ in range(c_num)]
+        self.feasible_filter = feasible_filter_gen(self.c_tensor_list, self.constraint_threshold_list)
+
+        assert torch.any(self.feasible_filter)
+
+        __feasible_y = torch.where(self.feasible_filter, self.y_tensor.squeeze(), float('-inf'))
+        self.maximum = __feasible_y.max()
+        self.max_arg = __feasible_y.argmax()
+
+        if not scbo_format:
+            return self.x_tensor_range, self.y_tensor, self.c_tensor_list
+            # return self.x_tensor, self.y_tensor, self.c_tensor_list
+        else:
+            return self.x_tensor, self.objective, self.c_func_list
         return
+
     
     def RE9_7D_8C(self, scbo_format:bool=False,):
         """An easy-to-use real-world multi-objective optimization problem suite - ScienceDirect
