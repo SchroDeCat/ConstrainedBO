@@ -11,7 +11,8 @@ import warnings
 import tqdm
 
 EXPS = ['rastrigin_1d', 'rastrigin_10d', 'ackley_5d', 'ackley_10d','rosenbrock_5d', 'rosenbrock_4d', 
-        'water_converter_32d', 'water_converter_32d_neg', 'water_converter_32d_neg_3c', 'gpu_performance_16d']
+        'water_converter_32d', 'water_converter_32d_neg', 'water_converter_32d_neg_3c', 'gpu_performance_16d', 
+        'vessel_4D_3C', 'car_cab_7D_8C', 'spring_3D_6C']
 METHODs = ['cbo',  'qei', 'scbo', 'ts','random', 'cmes-ibo', ]
 
 
@@ -31,14 +32,14 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         scbo = 'scbo' in method
         if not c_portion is None: # scanning the portion
             if scbo:
-                x_tensor, y_func, c_func_list = cbo_factory.rastrigin_1D(scbo_format=scbo, c_scan=True, c_portion=c_portion)
+                x_tensor, y_func, c_func_list = cbo_factory.rastrigin_1D_1C(scbo_format=scbo, c_scan=True, c_portion=c_portion)
             else:
-                x_tensor, y_tensor, c_tensor_list = cbo_factory.rastrigin_1D(scbo_format=scbo, c_scan=True, c_portion=c_portion)
+                x_tensor, y_tensor, c_tensor_list = cbo_factory.rastrigin_1D_1C(scbo_format=scbo, c_scan=True, c_portion=c_portion)
         else:
             if scbo:
-                x_tensor, y_func, c_func_list = cbo_factory.rastrigin_1D(scbo_format=scbo)
+                x_tensor, y_func, c_func_list = cbo_factory.rastrigin_1D_1C(scbo_format=scbo)
             else:
-                x_tensor, y_tensor, c_tensor_list = cbo_factory.rastrigin_1D(scbo_format=scbo)
+                x_tensor, y_tensor, c_tensor_list = cbo_factory.rastrigin_1D_1C(scbo_format=scbo)
         constraint_threshold_list, constraint_confidence_list = cbo_factory.constraint_threshold_list, cbo_factory.constraint_confidence_list
         feasible_filter = cbo_factory.feasible_filter
         y_tensor = cbo_factory.y_tensor
@@ -48,9 +49,9 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         cbo_factory = Constrained_Data_Factory(num_pts=20000//2)
         scbo = 'scbo' in method
         if scbo:
-            x_tensor, y_func, c_func_list = cbo_factory.ackley_5d(scbo_format=scbo)
+            x_tensor, y_func, c_func_list = cbo_factory.ackley_5D_2C(scbo_format=scbo)
         else:
-            x_tensor, y_tensor, c_tensor_list = cbo_factory.ackley_5d(scbo_format=scbo)
+            x_tensor, y_tensor, c_tensor_list = cbo_factory.ackley_5D_2C(scbo_format=scbo)
         constraint_threshold_list, constraint_confidence_list = cbo_factory.constraint_threshold_list, cbo_factory.constraint_confidence_list
         feasible_filter = cbo_factory.feasible_filter
         y_tensor = cbo_factory.y_tensor
@@ -59,6 +60,7 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         beta = .1
         filter_beta = 4
         constrain_noise = True
+
     elif exp == "rosenbrock_5d":
         cbo_factory = Constrained_Data_Factory(num_pts=50000)
         scbo = 'scbo' in method
@@ -81,6 +83,7 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         feasible_filter = cbo_factory.feasible_filter
         y_tensor = cbo_factory.y_tensor
         cbo_factory.visualize_1d(if_norm=True)
+
     elif exp == "water_converter_32d":
         cbo_factory = Constrained_Data_Factory(num_pts=30000)
         scbo = 'scbo' in method
@@ -92,6 +95,7 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         feasible_filter = cbo_factory.feasible_filter
         y_tensor = cbo_factory.y_tensor
         cbo_factory.visualize_1d(if_norm=True)
+
     elif exp == "water_converter_32d_neg":
         cbo_factory = Constrained_Data_Factory(num_pts=30000)
         scbo = 'scbo' in method
@@ -103,8 +107,9 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         feasible_filter = cbo_factory.feasible_filter
         y_tensor = cbo_factory.y_tensor
         cbo_factory.visualize_1d(if_norm=True)
+
     elif exp == "water_converter_32d_neg_3c":
-        cbo_factory = Constrained_Data_Factory(num_pts=70000)
+        cbo_factory = Constrained_Data_Factory(num_pts=10000)
         scbo = 'scbo' in method
         if scbo:
             x_tensor, y_func, c_func_list = cbo_factory.water_converter_32d_neg_3c(scbo_format=scbo)
@@ -114,6 +119,45 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         feasible_filter = cbo_factory.feasible_filter
         y_tensor = cbo_factory.y_tensor
         cbo_factory.visualize_1d(if_norm=True)
+        # filter_beta = 2
+        # beta = 2
+        constrain_noise = False
+        filter_beta = 20
+        beta = 20
+
+    elif exp == "vessel_4D_3C":
+        cbo_factory = Constrained_Data_Factory(num_pts=10000)
+        scbo = 'scbo' in method
+        if scbo:
+            x_tensor, y_func, c_func_list = cbo_factory.RE2_4D_3C(scbo_format=scbo)
+        else:
+            x_tensor, y_tensor, c_tensor_list = cbo_factory.RE2_4D_3C(scbo_format=scbo)
+        constraint_threshold_list, constraint_confidence_list = cbo_factory.constraint_threshold_list, cbo_factory.constraint_confidence_list
+        feasible_filter = cbo_factory.feasible_filter
+        y_tensor = cbo_factory.y_tensor
+        cbo_factory.visualize_1d(if_norm=True)
+    elif exp == "spring_3D_6C":
+        cbo_factory = Constrained_Data_Factory(num_pts=10000)
+        scbo = 'scbo' in method
+        if scbo:
+            x_tensor, y_func, c_func_list = cbo_factory.RE2_3_5(scbo_format=scbo)
+        else:
+            x_tensor, y_tensor, c_tensor_list = cbo_factory.RE2_3_5(scbo_format=scbo)
+        constraint_threshold_list, constraint_confidence_list = cbo_factory.constraint_threshold_list, cbo_factory.constraint_confidence_list
+        feasible_filter = cbo_factory.feasible_filter
+        y_tensor = cbo_factory.y_tensor
+        cbo_factory.visualize_1d(if_norm=True)
+    elif exp == "car_cab_7D_8C":
+        cbo_factory = Constrained_Data_Factory(num_pts=10000)
+        scbo = 'scbo' in method
+        if scbo:
+            x_tensor, y_func, c_func_list = cbo_factory.RE9_7D_8C(scbo_format=scbo)
+        else:
+            x_tensor, y_tensor, c_tensor_list = cbo_factory.RE9_7D_8C(scbo_format=scbo)
+        constraint_threshold_list, constraint_confidence_list = cbo_factory.constraint_threshold_list, cbo_factory.constraint_confidence_list
+        feasible_filter = cbo_factory.feasible_filter
+        y_tensor = cbo_factory.y_tensor
+        cbo_factory.visualize_1d(if_norm=True)   
     else:
         raise NotImplementedError(f"Exp {exp} no implemented")
 
@@ -199,14 +243,16 @@ if __name__ == "__main__":
     # n_init = 10
     # n_iter = 50
     # train_times = 50
-    n_repeat = 2
-    # n_repeat = 15
+    # n_repeat = 2
+    n_repeat = 15
     n_init = 5
     n_init2 = 20
+    n_init3 = 10
     # n_iter = 30
-    n_iter = 200
-    train_times = 5
-    # train_times=10
+    # n_iter = 200
+    n_iter = 50
+    # train_times = 5
+    # train_times = 10
 
     # experiment(n_init=5, method='qei')
     # experiment(n_init=5, method='ts')
@@ -218,11 +264,11 @@ if __name__ == "__main__":
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='ts')
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='cmes-ibo')
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='scbo')
-    experiment(exp='ackley_5d', n_init=n_init2, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='cbo')
-    experiment(exp='ackley_5d', n_init=n_init2, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='qei')
+    # experiment(exp='ackley_5d', n_init=n_init2, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='cbo')
+    # experiment(exp='ackley_5d', n_init=n_init2, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='qei')
     # experiment(exp='ackley_5d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='ts')
-    experiment(exp='ackley_5d', n_init=n_init2, n_repeat=n_repeat, n_iter=n_iter,train_times=train_times,  method='cmes-ibo')
-    experiment(exp='ackley_5d', n_init=n_init2, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='scbo')
+    # experiment(exp='ackley_5d', n_init=n_init2, n_repeat=n_repeat, n_iter=n_iter,train_times=train_times,  method='cmes-ibo')
+    # experiment(exp='ackley_5d', n_init=n_init2, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='scbo')
     # experiment(exp='rosenbrock_5d', n_init=10, n_repeat=1, n_iter=20, method='qei', constrain_noise=True)
     # experiment(exp='rosenbrock_5d', n_init=10, n_repeat=1, n_iter=20, method='cmes-ibo', constrain_noise=True)
     # experiment(exp='rosenbrock_5d', n_init=10, n_repeat=1, n_iter=20, method='scbo', constrain_noise=True)
@@ -232,11 +278,12 @@ if __name__ == "__main__":
     #     experiment(exp='rosenbrock_4d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, method=method, constrain_noise=True)
     
     # experiment(n_init=10, method='cbo')
-    # experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method='scbo', constrain_noise=True)
-    # experiment(exp='water_converter_32d_neg', n_init=20, n_repeat=10, n_iter=100, method='cbo', constrain_noise=True)
-    # experiment(exp='water_converter_32d_neg', n_init=20, n_repeat=10, n_iter=100, method='qei', constrain_noise=True)
-    # experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method='cmes-ibo', constrain_noise=True)
-    # experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method='cbo', constrain_noise=True)
+    # experiment(exp='water_converter_32d_neg', n_init=10, n_repeat=n_repeat, n_iter=n_iter, method='cbo', constrain_noise=True)
+    experiment(exp='water_converter_32d_neg_3c', n_init=n_init3, n_repeat=n_repeat, n_iter=n_iter, method='cbo',)
+    experiment(exp='water_converter_32d_neg_3c', n_init=n_init3, n_repeat=n_repeat, n_iter=n_iter, method='scbo',)
+    experiment(exp='water_converter_32d_neg_3c', n_init=n_init3, n_repeat=n_repeat, n_iter=n_iter, method='qei', )
+    experiment(exp='water_converter_32d_neg_3c', n_init=n_init3, n_repeat=n_repeat, n_iter=n_iter, method='cmes-ibo', )
+
     # for method in METHODs:
     #     if method in ['cbo', 'cmes-ibo']:
     #         continue
