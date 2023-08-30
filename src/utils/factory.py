@@ -179,7 +179,7 @@ class Constrained_Data_Factory(Data_Factory):
         self.c_func1 = lambda x: torch.abs(x+.7)**(1/2) - 2 **(1/2) 
         self.c_func1_scbo = lambda x: -self.c_func1(x)
         self.c_func_list = [self.c_func1_scbo]
-        self.x_tensor = self._generate_x_tensor(dim=1, num=self._num_pts).to(device=device, dtype=dtype)
+        self.x_tensor = self._generate_x_tensor(dim=dim, num=self._num_pts).to(device=device, dtype=dtype)
         self.x_tensor_range = unnormalize(self.x_tensor, (self.lb, self.ub))
         self.y_tensor = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.objective, self.x_tensor).unsqueeze(-1)
         self.c_tensor1 = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.c_func1, self.x_tensor).unsqueeze(-1)
@@ -427,6 +427,7 @@ class Constrained_Data_Factory(Data_Factory):
         self.x_tensor = (self.x_tensor_range - self.lb) / (self.ub - self.lb)
         self.y_tensor = data[:,-1].reshape([-1, 1]) / (raw_factor/_cali_factor) - 13 * _cali_factor
         raw_rewards = torch.from_numpy(raw_data[:,-17:-1]).to(device=device, dtype=dtype)
+
         self.objective = lambda x: Constrained_Data_Factory.nearest_approx(data, unnormalize(x, (self.lb, self.ub)), 32, reward_idx=-1) / (raw_factor/_cali_factor) - 13 *  _cali_factor
         self.c_tensor_3 = -torch.linalg.norm(self.x_tensor_range, dim=-1)**(1/4) + 2000**(1/4)
         self.c_func_3 = lambda x: torch.linalg.norm(unnormalize(x, (self.lb, self.ub)), dim=-1)**(1/4) - 2000**(1/4)
@@ -465,17 +466,17 @@ class Constrained_Data_Factory(Data_Factory):
         self.lb, self.ub = torch.tensor([1, 1, 10, 10]), torch.tensor([100, 100, 200, 240])
         self.lb, self.ub =self.lb.to(device=device, dtype=dtype), self.ub.to(device=device, dtype=dtype)
         
-        self.objective = lambda x: 0.6224*x[0]*x[2]*x[3] + 1.7781*x[0]*x[2]*x[2] + 3.1661*x[0]*x[0]*x[3] + 19.84*x[0]*x[0]*x[2]
+        self.objective = lambda x: (0.6224*x[0]*x[2]*x[3] + 1.7781*x[0]*x[2]*x[2] + 3.1661*x[0]*x[0]*x[3] + 19.84*x[0]*x[0]*x[2]) /1e6
         # self.c_func1 = lambda x: -(x+3)**2 + 0.64  # |x - -2| < 0.5
-        self.c_func1 = lambda x: x[0] - 0.0193*x[2]
+        self.c_func1 = lambda x: (x[0] - 0.0193*x[2]) /1e1
         self.c_func1_scbo = lambda x: -self.c_func1(x)
-        self.c_func2 = lambda x: x[1] - 0.00954*x[2]
+        self.c_func2 = lambda x: (x[1] - 0.00954*x[2]) / 1e1
         self.c_func2_scbo = lambda x: -self.c_func1(x)
-        self.c_func3 = lambda x: np.pi*x[2]**2*x[3] + 4/3*np.pi*x[2]**3-1296000
+        self.c_func3 = lambda x: (np.pi*x[2]**2*x[3] + 4/3*np.pi*x[2]**3-1296000)/1e6
         self.c_func3_scbo = lambda x: -self.c_func1(x)
 
         self.c_func_list = [self.c_func1_scbo, self.c_func2_scbo, self.c_func3_scbo]
-        self.x_tensor = self._generate_x_tensor(dim=1, num=self._num_pts).to(device=device, dtype=dtype)
+        self.x_tensor = self._generate_x_tensor(dim=dim, num=self._num_pts).to(device=device, dtype=dtype)
         self.x_tensor_range = unnormalize(self.x_tensor, (self.lb, self.ub))
         self.y_tensor = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.objective, self.x_tensor).unsqueeze(-1)
         self.c_tensor1 = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.c_func1, self.x_tensor).unsqueeze(-1)
@@ -501,7 +502,7 @@ class Constrained_Data_Factory(Data_Factory):
             return self.x_tensor, self.objective, self.c_func_list
         return
     
-    def RE2_3_5(self, scbo_format:bool=False,):
+    def RE2_3D_5C(self, scbo_format:bool=False,):
         """An easy-to-use real-world multi-objective optimization problem suite - ScienceDirect
             [https://www.sciencedirect.com/science/article/pii/S1568494620300181#appSB]
             Coil Compression Spring Design.
@@ -536,21 +537,22 @@ class Constrained_Data_Factory(Data_Factory):
         L_F = lambda x: (F_MAX / K(x)) + 1.05 *  (x[0] + 2) * x[2]
 
         # obj and constraints
-        self.objective = lambda x: (np.pi * np.pi * x[1] * x[2] * x[2] * (x[0] + 2)) / 4.0
+        self.objective = lambda x: (np.pi * np.pi * x[1] * x[2] * x[2] * (x[0] + 2)) / 4.0 / 1e1
         self._c_func_list = [None for _ in range(c_num)]
-        self._c_func_list[0] = lambda x: -((8 * C_F(x) * F_MAX * x[1]) / (np.pi * x[2] * x[2] * x[2])) + S
-        self._c_func_list[1] = lambda x: -L_F(x) + L_MAX
-        self._c_func_list[2] = lambda x: -3 + (x[1] / x[2])
-        self._c_func_list[3] = lambda x: -SIMGA_P(x) + SIMGA_PM
-        self._c_func_list[4] = lambda x: -SIMGA_P(x) - ((F_MAX - F_P) / K(x)) - 1.05 * (x[0] + 2) * x[2] + L_F(x)
-        self._c_func_list[5] = lambda x: SIMGA_W- ((F_MAX - F_P) / K(x))
+        self._c_func_list[0] = lambda x: (-((8 * C_F(x) * F_MAX * x[1]) / (np.pi * x[2] * x[2] * x[2])) + S) / 1e10
+        self._c_func_list[1] = lambda x: (-L_F(x) + L_MAX) / 1e11
+        self._c_func_list[2] = lambda x: (-3 + (x[1] / x[2])) / 1e3
+        self._c_func_list[3] = lambda x: (-SIMGA_P(x) + SIMGA_PM) / 1e10
+        self._c_func_list[4] = lambda x: (-SIMGA_P(x) - ((F_MAX - F_P) / K(x)) - 1.05 * (x[0] + 2) * x[2] + L_F(x))/1e3
+        self._c_func_list[5] = lambda x: (SIMGA_W- ((F_MAX - F_P) / K(x))) / 1e10
 
         
         self.c_func_list = [lambda x: -c_func(x)  for c_func in self._c_func_list]
-        self.x_tensor = self._generate_x_tensor(dim=1, num=self._num_pts).to(device=device, dtype=dtype)
+        self.x_tensor = self._generate_x_tensor(dim=dim, num=self._num_pts).to(device=device, dtype=dtype)
         self.x_tensor_range = unnormalize(self.x_tensor, (self.lb, self.ub))
         self.y_tensor = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.objective, self.x_tensor).unsqueeze(-1)
         self.c_tensor_list = [Constrained_Data_Factory.evaluate_func(self.lb, self.ub, c_func, self.x_tensor).unsqueeze(-1) for c_func in self._c_func_list]
+        self.c_tensor_max = [torch.abs(c_tensor).max() for c_tensor in self.c_tensor_list]
 
         # feasible region identification
         self.constraint_confidence_list = [0.5 for _ in range(c_num)]
@@ -570,11 +572,11 @@ class Constrained_Data_Factory(Data_Factory):
             return self.x_tensor, self.objective, self.c_func_list
         return
 
-    
     def RE9_7D_8C(self, scbo_format:bool=False,):
         """An easy-to-use real-world multi-objective optimization problem suite - ScienceDirect
             [https://www.sciencedirect.com/science/article/pii/S1568494620300181#appSB]
-            Note: the original supplementary material doens't match the description. We refer to github version:
+            Note: the original supplementary material doens't match the description and incur no-feasible region. 
+            We refer to github version:
             [https://github.com/ryojitanabe/reproblems/blob/master/reproblem_python_ver/reproblem.py]
             Car Cab Design.
         """
@@ -596,26 +598,26 @@ class Constrained_Data_Factory(Data_Factory):
         # obj and constraints
         self.objective = lambda x: 1.98 + 4.9*x[0] + 6.67*x[1] + 6.98*x[2] + 4.01*x[3] + 1.78*x[4] + 0.00001*x[5] + 2.73*x[6]
         self._c_func_list = [None for _ in range(c_num)]
-        self._c_func_list[0] = lambda x: 1 - (1.16 - 0.3717*x[1]*x[3] - 0.00931*x[1]*x9 - 0.484*x[2]*x8 + 0.01343*x[5]*x9)
-        self._c_func_list[1] = lambda x: .32 - (.261 - .0159*x[0]*x[1] - .188*x[0]*x7 - .019*x[1]*x[6] 
-                                                + .0144*x[2]*x[4] + .87570001*x[4]*x9 + 0.08045*x[5]*x8 
-                                                + 0.00139*x7*x10 + .00001575*x9*x10)
-        self._c_func_list[2] = lambda x: .32 - (0.214 + 0.00817 * x[4] - 0.131 * x[0] * x7 - 0.0704 * x[0] * x8
-                                                + 0.03099 * x[1] * x[5] - 0.018 * x[1] * x[6] + 0.0208 * x[2] * x7 
-                                                + 0.121 * x[2] * x8 - 0.00364 * x[4] * x[5] + 0.0007715 * x[4] * x9 
-                                                - 0.0005354 * x[5] * x9 + 0.00121 * x7 * x10 + 0.00184 * x8 * x9 - 0.018 * x[1] * x[1])
-        self._c_func_list[3] = lambda x: .32 - (0.74 - 0.61* x[1] - 0.163 * x[2] * x7 + 0.001232 * x[2] * x9 - 0.166 * x[6] * x8 + 0.227 * x[1] * x[1])
+        self._c_func_list[0] = lambda x: 1 - (1.16 - 0.3717*x[1]*x[3] - 0.00931*x[1]*x9() - 0.484*x[2]*x8() + 0.01343*x[5]*x9())
+        self._c_func_list[1] = lambda x: .32 - (.261 - .0159*x[0]*x[1] - .188*x[0]*x7() - .019*x[1]*x[6] 
+                                                + .0144*x[2]*x[4] + .87570001*x[4]*x9() + 0.08045*x[5]*x8() 
+                                                + 0.00139*x7()*x10() + .00001575*x9()*x10())
+        self._c_func_list[2] = lambda x: .32 - (0.214 + 0.00817 * x[4] - 0.131 * x[0] * x7() - 0.0704 * x[0] * x8()
+                                                + 0.03099 * x[1] * x[5] - 0.018 * x[1] * x[6] + 0.0208 * x[2] * x7() 
+                                                + 0.121 * x[2] * x8() - 0.00364 * x[4] * x[5] + 0.0007715 * x[4] * x9() 
+                                                - 0.0005354 * x[5] * x9() + 0.00121 * x7() * x10() + 0.00184 * x8() * x9() - 0.018 * x[1] * x[1])
+        self._c_func_list[3] = lambda x: .32 - (0.74 - 0.61* x[1] - 0.163 * x[2] * x7() + 0.001232 * x[2] * x9() - 0.166 * x[6] * x8() + 0.227 * x[1] * x[1])
         
-        self._c_func_list[4] = lambda x: 32 - (( 28.98 + 3.818 * x[2] - 4.2 * x[0] * x[1] + 0.0207 * x[4] * x9 + 6.63 * x[5] * x8 - 7.77 * x[6] * x7 + 0.32 * x8 * x9) 
-                                               + (33.86 + 2.95 * x[2] + 0.1792 * x9 - 5.057 * x[0] * x[1] - 11 * x[1] * x7 - 0.0215 * x[4] * x9 - 9.98 * x[6] * x7 + 22 * x7 * x8) 
-                                               + (46.36 - 9.9 * x[1] - 12.9 * x[0] * x7 + 0.1107 * x[2] * x9) )/3
-        self._c_func_list[5] = lambda x: 32 - (4.72 - 0.5 * x[3] - 0.19 * x[1] * x[2] - 0.0122 * x[3] * x9 + 0.009325 * x[5] * x9 + 0.000191 * x10 * x10)
-        self._c_func_list[6] = lambda x: 4 - (10.58 - 0.674 * x[0] * x[1] - 1.95  * x[1] * x7  + 0.02054  * x[2] * x9 - 0.0198  * x[3] * x9  + 0.028  * x[5] * x9)
-        self._c_func_list[7] = lambda x: 9.9 - (16.45 - 0.489 * x[2] * x[6] - 0.843 * x[4] * x[5] + 0.0432 * x8 * x9 - 0.0556 * x8 * x10 - 0.000786 * x10 * x10)
+        self._c_func_list[4] = lambda x: 32 - (( 28.98 + 3.818 * x[2] - 4.2 * x[0] * x[1] + 0.0207 * x[4] * x9() + 6.63 * x[5] * x8() - 7.77 * x[6] * x7() + 0.32 * x8() * x9()) 
+                                               + (33.86 + 2.95 * x[2] + 0.1792 * x9() - 5.057 * x[0] * x[1] - 11 * x[1] * x7() - 0.0215 * x[4] * x9() - 9.98 * x[6] * x7() + 22 * x7() * x8()) 
+                                               + (46.36 - 9.9 * x[1] - 12.9 * x[0] * x7() + 0.1107 * x[2] * x9()) )/3
+        self._c_func_list[5] = lambda x: 4.0 - (4.72 - 0.5 * x[3] - 0.19 * x[1] * x[2] - 0.0122 * x[3] * x9() + 0.009325 * x[5] * x9() + 0.000191 * x10() * x10())
+        self._c_func_list[6] = lambda x: 9.9 - (10.58 - 0.674 * x[0] * x[1] - 1.95  * x[1] * x7()  + 0.02054  * x[2] * x9() - 0.0198  * x[3] * x9()  + 0.028  * x[5] * x9())
+        self._c_func_list[7] = lambda x: 15.7 - (16.45 - 0.489 * x[2] * x[6] - 0.843 * x[4] * x[5] + 0.0432 * x8() * x9() - 0.0556 * x8() * x10() - 0.000786 * (x10()**2))
      
         
         self.c_func_list = [lambda x: -c_func(x)  for c_func in self._c_func_list]
-        self.x_tensor = self._generate_x_tensor(dim=1, num=self._num_pts).to(device=device, dtype=dtype)
+        self.x_tensor = self._generate_x_tensor(dim=dim, num=self._num_pts).to(device=device, dtype=dtype)
         self.x_tensor_range = unnormalize(self.x_tensor, (self.lb, self.ub))
         self.y_tensor = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.objective, self.x_tensor).unsqueeze(-1)
         self.c_tensor_list = [Constrained_Data_Factory.evaluate_func(self.lb, self.ub, c_func, self.x_tensor).unsqueeze(-1) for c_func in self._c_func_list]
