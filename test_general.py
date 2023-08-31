@@ -12,7 +12,7 @@ import tqdm
 
 EXPS = ['rastrigin_1d', 'rastrigin_10d', 'ackley_5d', 'ackley_10d','rosenbrock_5d', 'rosenbrock_4d', 
         'water_converter_32d', 'water_converter_32d_neg', 'water_converter_32d_neg_3c', 'gpu_performance_16d', 
-        'vessel_4D_3C', 'car_cab_7D_8C', 'spring_3D_6C']
+        'vessel_4d_3c', 'car_cab_7d_8c', 'spring_3d_6c']
 METHODs = ['cbo',  'qei', 'scbo', 'ts','random', 'cmes-ibo', ]
 
 
@@ -125,8 +125,8 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         filter_beta = 20
         beta = 20
 
-    elif exp == "vessel_4D_3C":
-        cbo_factory = Constrained_Data_Factory(num_pts=10000)
+    elif exp == "vessel_4d_3c":
+        cbo_factory = Constrained_Data_Factory(num_pts=40000)
         scbo = 'scbo' in method
         if scbo:
             x_tensor, y_func, c_func_list = cbo_factory.RE2_4D_3C(scbo_format=scbo)
@@ -136,18 +136,23 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         feasible_filter = cbo_factory.feasible_filter
         y_tensor = cbo_factory.y_tensor
         cbo_factory.visualize_1d(if_norm=True)
-    elif exp == "spring_3D_6C":
+        constrain_noise = False
+        # filter_beta = 2
+        # beta = 2
+
+    elif exp == "spring_3d_6c":
         cbo_factory = Constrained_Data_Factory(num_pts=10000)
         scbo = 'scbo' in method
         if scbo:
-            x_tensor, y_func, c_func_list = cbo_factory.RE2_3_5(scbo_format=scbo)
+            x_tensor, y_func, c_func_list = cbo_factory.RE2_3D_5C(scbo_format=scbo)
         else:
-            x_tensor, y_tensor, c_tensor_list = cbo_factory.RE2_3_5(scbo_format=scbo)
+            x_tensor, y_tensor, c_tensor_list = cbo_factory.RE2_3D_5C(scbo_format=scbo)
         constraint_threshold_list, constraint_confidence_list = cbo_factory.constraint_threshold_list, cbo_factory.constraint_confidence_list
         feasible_filter = cbo_factory.feasible_filter
         y_tensor = cbo_factory.y_tensor
         cbo_factory.visualize_1d(if_norm=True)
-    elif exp == "car_cab_7D_8C":
+        constrain_noise = False  
+    elif exp == "car_cab_7d_8c":
         cbo_factory = Constrained_Data_Factory(num_pts=10000)
         scbo = 'scbo' in method
         if scbo:
@@ -158,6 +163,7 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         feasible_filter = cbo_factory.feasible_filter
         y_tensor = cbo_factory.y_tensor
         cbo_factory.visualize_1d(if_norm=True)   
+        constrain_noise = False   
     else:
         raise NotImplementedError(f"Exp {exp} no implemented")
 
@@ -198,7 +204,10 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
 
     elif method =='scbo':
         init_feasible_reward = y_tensor[:n_init][feasible_filter[:n_init]]
-        max_reward = init_feasible_reward.max().item()
+        if init_feasible_reward.size(0) > 0:
+            max_reward = init_feasible_reward.max().item()
+        else:
+            max_reward = -torch.inf
         max_global = y_tensor[feasible_filter].max().item()
         regret = np.zeros([n_repeat, n_iter])
         # print(f"Feasible Y {init_feasible_reward}")
@@ -279,14 +288,33 @@ if __name__ == "__main__":
     
     # experiment(n_init=10, method='cbo')
     # experiment(exp='water_converter_32d_neg', n_init=10, n_repeat=n_repeat, n_iter=n_iter, method='cbo', constrain_noise=True)
-    experiment(exp='water_converter_32d_neg_3c', n_init=n_init3, n_repeat=n_repeat, n_iter=n_iter, method='cbo',)
-    experiment(exp='water_converter_32d_neg_3c', n_init=n_init3, n_repeat=n_repeat, n_iter=n_iter, method='scbo',)
-    experiment(exp='water_converter_32d_neg_3c', n_init=n_init3, n_repeat=n_repeat, n_iter=n_iter, method='qei', )
-    experiment(exp='water_converter_32d_neg_3c', n_init=n_init3, n_repeat=n_repeat, n_iter=n_iter, method='cmes-ibo', )
+
+    # experiment(exp='water_converter_32d_neg_3c', n_init=n_init3, n_repeat=n_repeat, n_iter=n_iter, method='cbo',)
+    # experiment(exp='water_converter_32d_neg_3c', n_init=n_init3, n_repeat=n_repeat, n_iter=n_iter, method='scbo',)
+    # experiment(exp='water_converter_32d_neg_3c', n_init=n_init3, n_repeat=n_repeat, n_iter=n_iter, method='qei', )
+    # experiment(exp='water_converter_32d_neg_3c', n_init=n_init3, n_repeat=n_repeat, n_iter=n_iter, method='cmes-ibo', )
 
     # for method in METHODs:
-    #     if method in ['cbo', 'cmes-ibo']:
+    #     # if method in ['cbo', 'cmes-ibo']:
+    #     if method in ['ts', 'random']:
     #         continue
-    #     experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method=method, constrain_noise=True)
+    #     # experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method=method, constrain_noise=True)
+    #     experiment(exp="vessel_4D_3C", n_init=2, n_iter=100, n_repeat=15, method=method)
+
+    for method in METHODs:
+        if method in ['cbo', 'qei']:
+            continue
+        if method in ['ts', 'random']:
+            continue
+        # experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method=method, constrain_noise=True)
+        experiment(exp="car_cab_7d_8c", n_init=5, n_iter=100, n_repeat=15, method=method)
 
 
+    for method in METHODs:
+        if method in ['cbo', 'qei']:
+            continue
+        if method in ['ts', 'random']:
+            continue
+        # experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method=method, constrain_noise=True)
+        experiment(exp="spring_3d_6c", n_init=10, n_iter=200, n_repeat=15, method=method)
+    # experiment(exp='spring_3d_6c', n_init=10, n_repeat=10, n_iter=n_iter, method='scbo')
