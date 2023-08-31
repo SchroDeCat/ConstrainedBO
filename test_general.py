@@ -16,7 +16,7 @@ EXPS = ['rastrigin_1d', 'rastrigin_10d', 'ackley_5d', 'ackley_10d','rosenbrock_5
 METHODs = ['cbo',  'qei', 'scbo', 'ts','random', 'cmes-ibo', ]
 
 
-def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_times:int=50, n_iter:int=20, n_init:int=10, 
+def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_times:int=5, n_iter:int=20, n_init:int=10, 
                constrain_noise:bool=True, interpolate:bool=True, c_portion:float=None, low_dim:bool=True, exact_gp:bool=False,
                beta:float = 10, filter_beta:float = 10  )->None:
     exp = exp.lower()
@@ -294,25 +294,25 @@ if __name__ == "__main__":
     # experiment(exp='water_converter_32d_neg_3c', n_init=n_init3, n_repeat=n_repeat, n_iter=n_iter, method='qei', )
     # experiment(exp='water_converter_32d_neg_3c', n_init=n_init3, n_repeat=n_repeat, n_iter=n_iter, method='cmes-ibo', )
 
-    # for method in METHODs:
-    #     # if method in ['cbo', 'cmes-ibo']:
-    #     if method in ['ts', 'random']:
-    #         continue
-    #     # experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method=method, constrain_noise=True)
-    #     experiment(exp="vessel_4D_3C", n_init=2, n_iter=100, n_repeat=15, method=method)
-
     for method in METHODs:
-        if method in ['cbo', 'qei']:
-            continue
+        # if method in ['cbo', 'cmes-ibo']:
         if method in ['ts', 'random']:
             continue
         # experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method=method, constrain_noise=True)
-        experiment(exp="car_cab_7d_8c", n_init=5, n_iter=100, n_repeat=15, method=method)
+        experiment(exp="vessel_4D_3C", n_init=2, n_iter=200, n_repeat=15, method=method)
+
+    for method in METHODs:
+        # if method in ['cbo', 'qei']:
+        #     continue
+        if method in ['ts', 'random']:
+            continue
+        # experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method=method, constrain_noise=True)
+        experiment(exp="car_cab_7d_8c", n_init=5, n_iter=200, n_repeat=15, method=method)
 
 
     for method in METHODs:
-        if method in ['cbo', 'qei']:
-            continue
+        # if method in ['cbo', 'qei']:
+        #     continue
         if method in ['ts', 'random']:
             continue
         # experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method=method, constrain_noise=True)

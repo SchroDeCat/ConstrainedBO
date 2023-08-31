@@ -222,7 +222,7 @@ class Constrained_Data_Factory(Data_Factory):
         self.c_func1 = lambda x: -torch.max(x**2)+3**2 # max x**2 <= 9
         self.c_func1_scbo = lambda x: -self.c_func1(x)
         # self.c_func2 = lambda x: - torch.linalg.vector_norm(x-torch.ones(dim))  + 4 # norm x < 5
-        self.c_func2 = lambda x:  (torch.linalg.vector_norm(x-torch.ones(dim)) - 5.5)**2 - 1.**2 # norm x < 4 or > 7
+        self.c_func2 = lambda x:  (torch.linalg.vector_norm(x-torch.ones(dim)) - 5.5)**2 - 1.**2 # norm x < 4.5 or > 6.5
         self.c_func2_scbo = lambda x: -self.c_func2(x)
         self.c_func_list = [self.c_func1_scbo, self.c_func2_scbo]
         self.x_tensor = self._generate_x_tensor(dim=dim, num=self._num_pts, seed=2).to(device=device, dtype=dtype)
