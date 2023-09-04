@@ -93,7 +93,8 @@ class DK_BO_AE_C():
             assert not (pretrained_nn is None)
             self._f_pure_dkl = DKL(self.init_x, self.init_y.squeeze(), n_iter=self.train_iter, low_dim=self.low_dim, pretrained_nn=None, lr=self.lr, spectrum_norm=spectrum_norm, exact_gp=exact_gp, interpolate = self.interpolate,)
             self.f_loss_record = {"DK-AE":[], "DK":[]}
-        self.cuda = torch.cuda.is_available()
+        # self.cuda = torch.cuda.is_available()
+        self.cuda = False
 
         self.train()
     
@@ -375,7 +376,8 @@ class DK_BO_AE_C_M():
                                    pretrained_nn=None, lr=self.lr, spectrum_norm=spectrum_norm, exact_gp=exact_gp, 
                                    interpolate = self.interpolate,)
             self.f_loss_record = {"DK-AE":[], "DK":[]}
-        self.cuda = torch.cuda.is_available()
+        # self.cuda = torch.cuda.is_available()
+        self.cuda = False
 
         self.train()
     
