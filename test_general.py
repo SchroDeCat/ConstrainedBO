@@ -126,7 +126,8 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         beta = 20
 
     elif exp == "vessel_4d_3c":
-        cbo_factory = Constrained_Data_Factory(num_pts=40000)
+        # cbo_factory = Constrained_Data_Factory(num_pts=40000)
+        cbo_factory = Constrained_Data_Factory(num_pts=120000)
         scbo = 'scbo' in method
         if scbo:
             x_tensor, y_func, c_func_list = cbo_factory.RE2_4D_3C(scbo_format=scbo)
@@ -301,20 +302,20 @@ if __name__ == "__main__":
         # experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method=method, constrain_noise=True)
         experiment(exp="vessel_4D_3C", n_init=2, n_iter=200, n_repeat=15, method=method)
 
-    for method in METHODs:
-        # if method in ['cbo', 'qei']:
-        #     continue
-        if method in ['ts', 'random']:
-            continue
-        # experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method=method, constrain_noise=True)
-        experiment(exp="car_cab_7d_8c", n_init=5, n_iter=200, n_repeat=15, method=method)
+    # for method in METHODs:
+    #     # if method in ['cbo', 'qei']:
+    #     #     continue
+    #     if method in ['ts', 'random']:
+    #         continue
+    #     # experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method=method, constrain_noise=True)
+    #     experiment(exp="car_cab_7d_8c", n_init=5, n_iter=200, n_repeat=15, method=method)
 
 
-    for method in METHODs:
-        # if method in ['cbo', 'qei']:
-        #     continue
-        if method in ['ts', 'random']:
-            continue
-        # experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method=method, constrain_noise=True)
-        experiment(exp="spring_3d_6c", n_init=10, n_iter=200, n_repeat=15, method=method)
-    # experiment(exp='spring_3d_6c', n_init=10, n_repeat=10, n_iter=n_iter, method='scbo')
+    # for method in METHODs:
+    #     # if method in ['cbo', 'qei']:
+    #     #     continue
+    #     if method in ['ts', 'random']:
+    #         continue
+    #     # experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method=method, constrain_noise=True)
+    #     experiment(exp="spring_3d_6c", n_init=10, n_iter=200, n_repeat=15, method=method)
+    # # experiment(exp='spring_3d_6c', n_init=10, n_repeat=10, n_iter=n_iter, method='scbo')

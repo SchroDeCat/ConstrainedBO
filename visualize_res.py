@@ -66,33 +66,33 @@ ax.set_title("Converter-36D-3C")
 
 # vessel 
 RES_num = {}
-RES_num["CBO"] = np.load(f"{CBO_DIR}OL-Regret-Figure_VESSEL_4D_3C-InterP-B10.00-FB10.00-RI1--none-ci-R15-P2-T100_I1_L4-TI50-USexact.npy")
-RES_num["CMES-IBO"] = np.load(f"{BASELINE_DIR}cmes-ibo/OL-Regret-Figure_VESSEL_4D_3C-InterP-RI1--none-cmes-ibo-R15-P2-T100_I1_L4-TI50-USexact.npy")
-RES_num["cEI"] = np.load(f"{BASELINE_DIR}qei/OL-Regret-Figure_VESSEL_4D_3C-InterP-RI1--none-qei-R15-P2-T100_I1_L4-TI50-USexact.npy")
-RES_num["SCBO"] = np.load(f"{SCBO_DIR}OL-Regret-Figure_VESSEL_4D_3C-InterP-RI1--none-scbo-R15-P2-T100_I1_L4-TI50-USexact.npy")
+RES_num["CBO"] = np.load(f"{CBO_DIR}OL-Regret-Figure_VESSEL_4D_3C-InterP-B10.00-FB10.00-RI1--none-ci-R15-P2-T200_I1_L4-TI5-USexact.npy")
+RES_num["CMES-IBO"] = np.load(f"{BASELINE_DIR}cmes-ibo/OL-Regret-Figure_VESSEL_4D_3C-InterP-RI1--none-cmes-ibo-R15-P2-T200_I1_L4-TI5-USexact.npy")
+RES_num["cEI"] = np.load(f"{BASELINE_DIR}qei/OL-Regret-Figure_VESSEL_4D_3C-InterP-RI1--none-qei-R15-P2-T200_I1_L4-TI5-USexact.npy")
+RES_num["SCBO"] = np.load(f"{SCBO_DIR}OL-Regret-Figure_VESSEL_4D_3C-InterP-RI1--none-scbo-R15-P2-T200_I1_L4-TI5-USexact.npy")
 ax = plt.subplot(2,3,4)
-visualize_regret(ax=ax, RES=RES_num, fontsize=fontsize, n_repeat=15, n_iter=100)
+visualize_regret(ax=ax, RES=RES_num, fontsize=fontsize, n_repeat=15, n_iter=200)
 ax.set_title("Vessel-4D-3C")
 
 
 # car cabin
 RES_num = {}
-RES_num["CBO"] = np.load(f"{CBO_DIR}OL-Regret-Figure_CAR_CAB_7D_8C-InterP-B10.00-FB10.00-RI1--none-ci-R15-P2-T100_I1_L4-TI50-USexact.npy")
-RES_num["CMES-IBO"] = np.load(f"{BASELINE_DIR}cmes-ibo/OL-Regret-Figure_CAR_CAB_7D_8C-InterP-RI1--none-cmes-ibo-R15-P2-T100_I1_L4-TI50-USexact.npy")
-RES_num["cEI"] = np.load(f"{BASELINE_DIR}qei/OL-Regret-Figure_CAR_CAB_7D_8C-InterP-RI1--none-qei-R15-P2-T100_I1_L4-TI50-USexact.npy")
-# RES_num["SCBO"] = np.load(f"{SCBO_DIR}OL-Regret-Figure_CAR_CAB_7D_8C-InterP-RI1--none-scbo-R15-P2-T100_I1_L4-TI50-USexact.npy")
+RES_num["CBO"] = np.load(f"{CBO_DIR}OL-Regret-Figure_CAR_CAB_7D_8C-InterP-B10.00-FB10.00-RI1--none-ci-R15-P2-T200_I1_L4-TI5-USexact.npy")
+RES_num["CMES-IBO"] = np.load(f"{BASELINE_DIR}cmes-ibo/OL-Regret-Figure_CAR_CAB_7D_8C-InterP-RI1--none-cmes-ibo-R15-P2-T200_I1_L4-TI5-USexact.npy")
+RES_num["cEI"] = np.load(f"{BASELINE_DIR}qei/OL-Regret-Figure_CAR_CAB_7D_8C-InterP-RI1--none-qei-R15-P2-T200_I1_L4-TI5-USexact.npy")
+RES_num["SCBO"] = np.load(f"{SCBO_DIR}OL-Regret-Figure_CAR_CAB_7D_8C-InterP-RI1--none-scbo-R15-P2-T200_I1_L4-TI5-USexact.npy")
 ax = plt.subplot(2,3,5)
-visualize_regret(ax=ax, RES=RES_num, fontsize=fontsize, n_repeat=15, n_iter=100)
+visualize_regret(ax=ax, RES=RES_num, fontsize=fontsize, n_repeat=15, n_iter=200)
 ax.set_title("Car_Cabin-7D-8C")
 
 # spring
 RES_num = {}
-RES_num["CBO"] = np.load(f"{CBO_DIR}OL-Regret-Figure_SPRING_3D_6C-InterP-B10.00-FB10.00-RI1--none-ci-R15-P2-T200_I1_L4-TI50-USexact.npy")
-# RES_num["CMES-IBO"] = np.load(f"{BASELINE_DIR}cmes-ibo/OL-Regret-Figure_VESSEL_4D_3C-InterP-RI1--none-cmes-ibo-R15-P2-T100_I1_L4-TI50-USexact.npy")
-RES_num["cEI"] = np.load(f"{BASELINE_DIR}qei/OL-Regret-Figure_SPRING_3D_6C-InterP-RI1--none-qei-R15-P2-T200_I1_L4-TI50-USexact.npy")
-# RES_num["SCBO"] = np.load(f"{SCBO_DIR}OL-Regret-Figure_CAR_CAB_7D_8C-InterP-RI1--none-scbo-R15-P2-T100_I1_L4-TI50-USexact.npy")
+RES_num["CBO"] = np.load(f"{CBO_DIR}OL-Regret-Figure_SPRING_3D_6C-InterP-B10.00-FB10.00-RI1--none-ci-R15-P2-T200_I1_L4-TI5-USexact.npy")
+RES_num["CMES-IBO"] = np.load(f"{BASELINE_DIR}cmes-ibo/OL-Regret-Figure_SPRING_3D_6C-InterP-RI1--none-cmes-ibo-R15-P2-T200_I1_L4-TI5-USexact.npy")
+RES_num["cEI"] = np.load(f"{BASELINE_DIR}qei/OL-Regret-Figure_SPRING_3D_6C-InterP-RI1--none-qei-R15-P2-T200_I1_L4-TI5-USexact.npy")
+RES_num["SCBO"] = np.load(f"{SCBO_DIR}/OL-Regret-Figure_SPRING_3D_6C-InterP-RI1--none-scbo-R15-P2-T200_I1_L4-TI5-USexact.npy")
 ax = plt.subplot(2,3,6)
-visualize_regret(ax=ax, RES=RES_num, fontsize=fontsize, n_repeat=15, n_iter=100)
+visualize_regret(ax=ax, RES=RES_num, fontsize=fontsize, n_repeat=15, n_iter=200)
 ax.set_title("spring-3D-6C")
 
 
