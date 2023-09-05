@@ -447,6 +447,8 @@ class Constrained_Data_Factory(Data_Factory):
         self.maximum = __feasible_y.max()
         self.max_arg = __feasible_y.argmax()
 
+        self.c_portion = (sum(self.feasible_filter) / self.feasible_filter.size(0)).detach().item()
+
         if not scbo_format:
             return self.x_tensor_range, self.y_tensor, self.c_tensor_list
             # return self.x_tensor, self.y_tensor, self.c_tensor_list
@@ -466,7 +468,7 @@ class Constrained_Data_Factory(Data_Factory):
         self.lb, self.ub = torch.tensor([1, 1, 10, 10]), torch.tensor([100, 100, 200, 240])
         self.lb, self.ub =self.lb.to(device=device, dtype=dtype), self.ub.to(device=device, dtype=dtype)
         
-        self.objective = lambda x: (0.6224*x[0]*x[2]*x[3] + 1.7781*x[0]*x[2]*x[2] + 3.1661*x[0]*x[0]*x[3] + 19.84*x[0]*x[0]*x[2]) /1e6
+        self.objective = lambda x: -(0.6224*x[0]*x[2]*x[3] + 1.7781*x[0]*x[2]*x[2] + 3.1661*x[0]*x[0]*x[3] + 19.84*x[0]*x[0]*x[2]) /1e6
         # self.c_func1 = lambda x: -(x+3)**2 + 0.64  # |x - -2| < 0.5
         self.c_func1 = lambda x: (x[0] - 0.0193*x[2]) /1e1
         self.c_func1_scbo = lambda x: -self.c_func1(x)
@@ -494,6 +496,7 @@ class Constrained_Data_Factory(Data_Factory):
         __feasible_y = torch.where(self.feasible_filter, self.y_tensor.squeeze(), float('-inf'))
         self.maximum = __feasible_y.max()
         self.max_arg = __feasible_y.argmax()
+        self.c_portion = (sum(self.feasible_filter) / self.feasible_filter.size(0)).detach().item()
 
         if not scbo_format:
             return self.x_tensor_range, self.y_tensor, self.c_tensor_list
@@ -502,7 +505,7 @@ class Constrained_Data_Factory(Data_Factory):
             return self.x_tensor, self.objective, self.c_func_list
         return
     
-    def RE2_3D_5C(self, scbo_format:bool=False,):
+    def RE2_3D_6C(self, scbo_format:bool=False,):
         """An easy-to-use real-world multi-objective optimization problem suite - ScienceDirect
             [https://www.sciencedirect.com/science/article/pii/S1568494620300181#appSB]
             Coil Compression Spring Design.
@@ -537,7 +540,7 @@ class Constrained_Data_Factory(Data_Factory):
         L_F = lambda x: (F_MAX / K(x)) + 1.05 *  (x[0] + 2) * x[2]
 
         # obj and constraints
-        self.objective = lambda x: (np.pi * np.pi * x[1] * x[2] * x[2] * (x[0] + 2)) / 4.0 / 1e1
+        self.objective = lambda x: -(np.pi * np.pi * x[1] * x[2] * x[2] * (x[0] + 2)) / 4.0 / 1e1
         self._c_func_list = [None for _ in range(c_num)]
         self._c_func_list[0] = lambda x: (-((8 * C_F(x) * F_MAX * x[1]) / (np.pi * x[2] * x[2] * x[2])) + S) / 1e10
         self._c_func_list[1] = lambda x: (-L_F(x) + L_MAX) / 1e11
@@ -564,6 +567,8 @@ class Constrained_Data_Factory(Data_Factory):
         __feasible_y = torch.where(self.feasible_filter, self.y_tensor.squeeze(), float('-inf'))
         self.maximum = __feasible_y.max()
         self.max_arg = __feasible_y.argmax()
+        self.c_portion = (sum(self.feasible_filter) / self.feasible_filter.size(0)).detach().item()
+        
 
         if not scbo_format:
             return self.x_tensor_range, self.y_tensor, self.c_tensor_list
@@ -596,7 +601,7 @@ class Constrained_Data_Factory(Data_Factory):
         x10 = lambda : 10 * (np.random.normal(0, 1)) + 0.0
 
         # obj and constraints
-        self.objective = lambda x: 1.98 + 4.9*x[0] + 6.67*x[1] + 6.98*x[2] + 4.01*x[3] + 1.78*x[4] + 0.00001*x[5] + 2.73*x[6]
+        self.objective = lambda x: -(1.98 + 4.9*x[0] + 6.67*x[1] + 6.98*x[2] + 4.01*x[3] + 1.78*x[4] + 0.00001*x[5] + 2.73*x[6])
         self._c_func_list = [None for _ in range(c_num)]
         self._c_func_list[0] = lambda x: 1 - (1.16 - 0.3717*x[1]*x[3] - 0.00931*x[1]*x9() - 0.484*x[2]*x8() + 0.01343*x[5]*x9())
         self._c_func_list[1] = lambda x: .32 - (.261 - .0159*x[0]*x[1] - .188*x[0]*x7() - .019*x[1]*x[6] 
@@ -632,6 +637,8 @@ class Constrained_Data_Factory(Data_Factory):
         __feasible_y = torch.where(self.feasible_filter, self.y_tensor.squeeze(), float('-inf'))
         self.maximum = __feasible_y.max()
         self.max_arg = __feasible_y.argmax()
+
+        self.c_portion = (sum(self.feasible_filter) / self.feasible_filter.size(0)).detach().item()
 
         if not scbo_format:
             return self.x_tensor_range, self.y_tensor, self.c_tensor_list
