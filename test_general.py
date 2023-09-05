@@ -142,7 +142,8 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         # beta = 2
 
     elif exp == "spring_3d_6c":
-        cbo_factory = Constrained_Data_Factory(num_pts=10000)
+        # cbo_factory = Constrained_Data_Factory(num_pts=10000)
+        cbo_factory = Constrained_Data_Factory(num_pts=2000)
         scbo = 'scbo' in method
         if scbo:
             x_tensor, y_func, c_func_list = cbo_factory.RE2_3D_5C(scbo_format=scbo)
@@ -304,7 +305,8 @@ if __name__ == "__main__":
     #     experiment(exp='water_converter_32d_neg_3c', n_init=n_init3, n_repeat=n_repeat, n_iter=200, method=method, )
 
 
-    experiment(exp="vessel_4D_3C", n_init=2, n_iter=200, n_repeat=15, method='cmes-ibo')
+    # experiment(exp="vessel_4D_3C", n_init=2, n_iter=200, n_repeat=15, method='cmes-ibo')
+
     # for method in METHODs:
     #     # if method in ['cbo', 'cmes-ibo']:
     #     if method in ['ts', 'random']:
@@ -320,11 +322,11 @@ if __name__ == "__main__":
     #     experiment(exp="car_cab_7d_8c", n_init=5, n_iter=200, n_repeat=15, method=method)
 
 
-    # for method in METHODs:
+    for method in METHODs:
     #     # if method in ['cbo', 'qei']:
     #     #     continue
-    #     if method in ['ts', 'random']:
-    #         continue
+        if method in ['ts', 'random']:
+            continue
     #     # experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method=method, constrain_noise=True)
-    #     experiment(exp="spring_3d_6c", n_init=10, n_iter=200, n_repeat=15, method=method)
+        experiment(exp="spring_3d_6c", n_init=10, n_iter=200, n_repeat=15, method=method)
     # experiment(exp='spring_3d_6c', n_init=10, n_repeat=10, n_iter=n_iter, method='scbo')
