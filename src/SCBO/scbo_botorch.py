@@ -354,7 +354,9 @@ class SCBO:
         bool_tensor = constraint_vals <= 0
         bool_tensor = torch.all(bool_tensor, dim=-1).unsqueeze(-1)
         _raw_reward = self.train_Y.squeeze() 
-        self.reward = [_raw_reward[idx].detach().item() if bool_tensor[idx] else _raw_reward.min() for idx in range(_raw_reward.size(0))]
+        # actually if no feasible pts found, it would be inf, but we avoid the numericial problem by allowing it exceeding the true maximum
+        # with _raw_reward.min(). need to be fixed
+        self.reward = [_raw_reward[idx].detach().item() if bool_tensor[idx] else -torch.inf for idx in range(_raw_reward.size(0))]
 
         return np.maximum.accumulate(self.reward)
             
