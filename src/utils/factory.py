@@ -550,7 +550,15 @@ class Constrained_Data_Factory(Data_Factory):
         self._c_func_list[5] = lambda x: (SIMGA_W- ((F_MAX - F_P) / K(x))) / 1e10
 
         
-        self.c_func_list = [lambda x: -c_func(x)  for c_func in self._c_func_list]
+     #  avoid unknown bug in for loop + lambda
+        self.c_func_list = [None for _ in range(c_num)]
+        self.c_func_list[0] = lambda x: -self._c_func_list[0](x)
+        self.c_func_list[1] = lambda x: -self._c_func_list[1](x)
+        self.c_func_list[2] = lambda x: -self._c_func_list[2](x)
+        self.c_func_list[3] = lambda x: -self._c_func_list[3](x)
+        self.c_func_list[4] = lambda x: -self._c_func_list[4](x)
+        self.c_func_list[5] = lambda x: -self._c_func_list[5](x)
+
         self.x_tensor = self._generate_x_tensor(dim=dim, num=self._num_pts).to(device=device, dtype=dtype)
         self.x_tensor_range = unnormalize(self.x_tensor, (self.lb, self.ub))
         self.y_tensor = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.objective, self.x_tensor).unsqueeze(-1)
@@ -619,9 +627,21 @@ class Constrained_Data_Factory(Data_Factory):
         self._c_func_list[5] = lambda x: 4.0 - (4.72 - 0.5 * x[3] - 0.19 * x[1] * x[2] - 0.0122 * x[3] * x9() + 0.009325 * x[5] * x9() + 0.000191 * x10() * x10())
         self._c_func_list[6] = lambda x: 9.9 - (10.58 - 0.674 * x[0] * x[1] - 1.95  * x[1] * x7()  + 0.02054  * x[2] * x9() - 0.0198  * x[3] * x9()  + 0.028  * x[5] * x9())
         self._c_func_list[7] = lambda x: 15.7 - (16.45 - 0.489 * x[2] * x[6] - 0.843 * x[4] * x[5] + 0.0432 * x8() * x9() - 0.0556 * x8() * x10() - 0.000786 * (x10()**2))
+        # self._c_func_list[8] = lambda x: 1 # sanitray check
      
+     #  avoid unknown bug in for loop + lambda
+        self.c_func_list = [None for _ in range(c_num)]
+        self.c_func_list[0] = lambda x: -self._c_func_list[0](x)
+        self.c_func_list[1] = lambda x: -self._c_func_list[1](x)
+        self.c_func_list[2] = lambda x: -self._c_func_list[2](x)
+        self.c_func_list[3] = lambda x: -self._c_func_list[3](x)
+        self.c_func_list[4] = lambda x: -self._c_func_list[4](x)
+        self.c_func_list[5] = lambda x: -self._c_func_list[5](x)
+        self.c_func_list[6] = lambda x: -self._c_func_list[6](x)
+        self.c_func_list[7] = lambda x: -self._c_func_list[7](x)
+        # self.c_func_list[8] = lambda x: -self._c_func_list[8](x)
         
-        self.c_func_list = [lambda x: -c_func(x)  for c_func in self._c_func_list]
+        
         self.x_tensor = self._generate_x_tensor(dim=dim, num=self._num_pts).to(device=device, dtype=dtype)
         self.x_tensor_range = unnormalize(self.x_tensor, (self.lb, self.ub))
         self.y_tensor = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.objective, self.x_tensor).unsqueeze(-1)
