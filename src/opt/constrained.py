@@ -542,7 +542,10 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
 
                 # if ci_intersection:
                 if not (default_beta): # only for visualization & intersection
-                    _roi_beta = min(1e2, max(1e-2, f_ucb.max()/_roi_f_ucb.max()) )
+                    if beta <= 1e1:
+                        _roi_beta = min(1e2, max(1e-2, f_ucb.max()/_roi_f_ucb.max()))
+                    else:
+                        _roi_beta = beta
                 else:
                     _search_space_size = x_tensor[roi_filter].shape[0]
                     _constraint_num = c_num
