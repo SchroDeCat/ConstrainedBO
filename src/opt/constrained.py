@@ -411,8 +411,8 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
                 init_y = y_tensor[:n_init]
                 init_c_list = [c_tensor_list[c_idx][:n_init] for c_idx in range(c_num)]
             else:
-                init_y = torch.normal(mean=y_tensor[:n_init], std=torch.ones(n_init)/10)
-                init_c_list = [torch.normal(mean=c_tensor_list[c_idx][:n_init], std=torch.ones(n_init)/10) for c_idx in range(c_num)]
+                init_y = torch.normal(mean=y_tensor[:n_init], std=torch.ones(1)/1e1)
+                init_c_list = [torch.normal(mean=c_tensor_list[c_idx][:n_init], std=torch.ones(1)/1e3) for c_idx in range(c_num)]
             # NOTE: AE is shared for f and c
             _f_model = DKL(init_x, init_y.squeeze(), n_iter=train_times, low_dim=low_dim, lr=lr, spectrum_norm=spectrum_norm, exact_gp=exact_gp, noise_constraint=global_noise_constraint, pretrained_nn=ae, interpolate=interpolate)
             _c_model_list = [DKL(init_x, init_c_list[c_idx].squeeze(), n_iter=train_times, low_dim=low_dim, lr=lr, spectrum_norm=spectrum_norm, 
@@ -536,8 +536,8 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
                     init_c_list = [c_tensor[observed_unfiltered==1] for c_tensor in c_tensor_list]
                 else:
                     _obs_count = sum(observed_unfiltered==1)
-                    init_y = torch.normal(mean=y_tensor[observed_unfiltered==1], std=torch.ones(_obs_count)/10)
-                    init_c_list = [torch.normal(mean=c_tensor[observed_unfiltered==1], std=torch.ones(_obs_count)/10) for c_tensor in c_tensor_list]
+                    init_y = torch.normal(mean=y_tensor[observed_unfiltered==1], std=torch.ones(1)/1e1)
+                    init_c_list = [torch.normal(mean=c_tensor[observed_unfiltered==1], std=torch.ones(1)/1e3) for c_tensor in c_tensor_list]
 
                 # optimization
                 if local_model: # allow training a local model and optimize on top of it
@@ -787,8 +787,8 @@ def baseline_cbo_m(x_tensor, y_tensor, c_tensor_list,
                 init_y = y_tensor[:n_init]
                 init_c_list = [c_tensor_list[c_idx][:n_init] for c_idx in range(c_num)]
             else:
-                init_y = torch.normal(mean=y_tensor[:n_init], std=torch.ones(n_init)/10)
-                init_c_list = [torch.normal(mean=c_tensor_list[c_idx][:n_init], std=torch.ones(n_init)/10) for c_idx in range(c_num)]
+                init_y = torch.normal(mean=y_tensor[:n_init], std=torch.ones(1)/1e1)
+                init_c_list = [torch.normal(mean=c_tensor_list[c_idx][:n_init], std=torch.ones(1)/1e3) for c_idx in range(c_num)]
     
             _cbo_m = DK_BO_AE_C_M(x_tensor, y_tensor, c_tensor_list, None, None, 
                                     lr=lr, spectrum_norm=spectrum_norm, 

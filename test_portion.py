@@ -14,6 +14,7 @@ EXPS = ['rastrigin_1d', 'rastrigin_10d', 'ackley_5d', 'ackley_10d','rosenbrock_5
         'water_converter_32d', 'water_converter_32d_neg', 'water_converter_32d_neg_3c', 'gpu_performance_16d', 
         'vessel_4d_3c', 'car_cab_7d_8c', 'spring_3d_6c']
 METHODs = ['cbo',  'qei', 'scbo', 'ts','random', 'cmes-ibo', ]
+NOISE = True
 
 
 def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_times:int=5, n_iter:int=20, n_init:int=10, 
@@ -23,7 +24,7 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
     method = method.lower()
     assert exp in EXPS
     assert method in METHODs
-    name = f"{exp.upper()}-CP{c_portion:.2%}"
+    name = f"{exp.upper()}-CP{c_portion:.2%}{'_noise' if NOISE else ''}"
     lr = 1e-4
   
     ### exp
@@ -200,7 +201,7 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
                                 plot_result=True, save_result=True, save_path=f'./res/scan', 
                                 fix_seed=True,  pretrained=False, ae_loc=None, 
                                 exact_gp=exact_gp, constrain_noise=constrain_noise,
-                                interpolate=interpolate,)
+                                interpolate=interpolate, noisy_obs=NOISE)
         
     elif method == 'cbo':
 
@@ -219,7 +220,7 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
                     ci_intersection=False, verbose=True, lr=1e-4, name=name, return_result=True, retrain_nn=True,
                     plot_result=True, save_result=True, save_path='./res/scan', fix_seed=True,  pretrained=False, ae_loc=None, 
                     _minimum_pick = 10, _delta = 0.01, beta=beta, filter_beta=filter_beta, exact_gp=exact_gp, constrain_noise=constrain_noise, 
-                    local_model=False,  interpolate=interpolate,)
+                    local_model=False,  interpolate=interpolate, noisy_obs=NOISE)
 
     elif method =='scbo':
         init_feasible_reward = y_tensor[:n_init][feasible_filter[:n_init]]
@@ -290,7 +291,7 @@ if __name__ == "__main__":
 
     for c_portion in tqdm.auto.tqdm(np.linspace(.1, .9, 5)):
         for method in ['cbo', 'cmes-ibo']:
-            experiment(exp='rastrigin_1d', n_init=10, n_repeat=2, n_iter=20, train_times=1, method=method, c_portion=c_portion)
+            experiment(exp=f"rastrigin_1d", n_init=10, n_repeat=2, n_iter=2, train_times=1, method=method, c_portion=c_portion)
 
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='cbo')
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='qei')

@@ -188,7 +188,7 @@ class Constrained_Data_Factory(Data_Factory):
         # feasible region identification
         self.constraint_confidence_list = [0.5]
         if scan_c:
-            self.c_portion = kwargs.get('constrained_portion', .1) # portion of feasible region
+            self.c_portion = kwargs.get('c_portion', .1) # portion of feasible region
             self.constraint_threshold_list = [np.quantile(self.c_tensor1, 1 - self.c_portion)] 
         else:
             self.constraint_threshold_list = [0]
