@@ -166,7 +166,7 @@ class Constrained_Data_Factory(Data_Factory):
     def rastrigin_1D_1C(self, scbo_format:bool=False, **kwargs) -> List[tensor]:
         """https://www.sfu.ca/~ssurjano/rastr.html"""
         self._name = 'Rastrigin 1D'
-        scan_c = kwargs.get('scan_constraint', False) # if moving the threshold
+        scan_c = kwargs.get('c_scan', False) # if moving the threshold
 
         dim = 1
         self.dim = dim

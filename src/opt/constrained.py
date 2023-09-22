@@ -333,7 +333,7 @@ def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidenc
 def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, constraint_confidence_list, n_init=10, n_repeat=2, train_times=10, beta=2, regularize=False, low_dim=True, 
             spectrum_norm=False, retrain_interval=1, n_iter=40, filter_interval=1, acq="ci", ci_intersection=True, verbose=True, lr=1e-2, name="test", return_result=True, retrain_nn=True,
             plot_result=False, save_result=False, save_path=None, fix_seed=False,  pretrained=False, ae_loc=None, _minimum_pick = 10, 
-            _delta = 0.01, filter_beta=.05, exact_gp=False, constrain_noise=False, local_model=True, interpolate=True):
+            _delta = 0.01, filter_beta=.05, exact_gp=False, constrain_noise=False, local_model=True, interpolate=True, noisy_obs=False):
     '''
     Proposed ROI based method, default acq = ci
     Support Multiple Constraints
@@ -407,8 +407,12 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
             observed = np.zeros(data_size)
             observed[:n_init] = 1
             init_x = x_tensor[:n_init]
-            init_y = y_tensor[:n_init]
-            init_c_list = [c_tensor_list[c_idx][:n_init] for c_idx in range(c_num)]
+            if not noisy_obs:
+                init_y = y_tensor[:n_init]
+                init_c_list = [c_tensor_list[c_idx][:n_init] for c_idx in range(c_num)]
+            else:
+                init_y = torch.normal(mean=y_tensor[:n_init], std=torch.ones(n_init)/10)
+                init_c_list = [torch.normal(mean=c_tensor_list[c_idx][:n_init], std=torch.ones(n_init)/10) for c_idx in range(c_num)]
             # NOTE: AE is shared for f and c
             _f_model = DKL(init_x, init_y.squeeze(), n_iter=train_times, low_dim=low_dim, lr=lr, spectrum_norm=spectrum_norm, exact_gp=exact_gp, noise_constraint=global_noise_constraint, pretrained_nn=ae, interpolate=interpolate)
             _c_model_list = [DKL(init_x, init_c_list[c_idx].squeeze(), n_iter=train_times, low_dim=low_dim, lr=lr, spectrum_norm=spectrum_norm, 
@@ -527,6 +531,14 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
                 init_y = y_tensor[observed_unfiltered==1]
                 init_c_list = [c_tensor[observed_unfiltered==1] for c_tensor in c_tensor_list]
 
+                if not noisy_obs:
+                    init_y = y_tensor[observed_unfiltered==1]
+                    init_c_list = [c_tensor[observed_unfiltered==1] for c_tensor in c_tensor_list]
+                else:
+                    _obs_count = sum(observed_unfiltered==1)
+                    init_y = torch.normal(mean=y_tensor[observed_unfiltered==1], std=torch.ones(_obs_count)/10)
+                    init_c_list = [torch.normal(mean=c_tensor[observed_unfiltered==1], std=torch.ones(_obs_count)/10) for c_tensor in c_tensor_list]
+
                 # optimization
                 if local_model: # allow training a local model and optimize on top of it
                     _f_model_passed_in, _c_model_list_passed_in = None, None
@@ -542,7 +554,7 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
 
                 # if ci_intersection:
                 if not (default_beta): # only for visualization & intersection
-                    if beta <= 1e1:
+                    if beta <= 1e2 and beta >= 3:
                         _roi_beta = min(1e2, max(1e-2, f_ucb.max()/_roi_f_ucb.max()))
                     else:
                         _roi_beta = beta
@@ -704,7 +716,8 @@ def baseline_cbo_m(x_tensor, y_tensor, c_tensor_list,
                     name="test", return_result=True, retrain_nn=True,
                     plot_result=False, save_result=False, save_path=None, fix_seed=False,  
                     pretrained=False, ae_loc=None,
-                    exact_gp=False, constrain_noise=False, interpolate=False):
+                    exact_gp=False, constrain_noise=False, 
+                    interpolate=False, noisy_obs=False):
     '''
     CEI by Bayesian Optimization with Unknown Constraints
     Michael A. Gelbart, Jasper Snoek, Ryan P. Adams
@@ -770,8 +783,12 @@ def baseline_cbo_m(x_tensor, y_tensor, c_tensor_list,
             observed = np.zeros(data_size)
             observed[:n_init] = 1
             init_x = x_tensor[:n_init]
-            init_y = y_tensor[:n_init]
-            init_c_list = [c_tensor_list[c_idx][:n_init] for c_idx in range(c_num)]
+            if not noisy_obs:
+                init_y = y_tensor[:n_init]
+                init_c_list = [c_tensor_list[c_idx][:n_init] for c_idx in range(c_num)]
+            else:
+                init_y = torch.normal(mean=y_tensor[:n_init], std=torch.ones(n_init)/10)
+                init_c_list = [torch.normal(mean=c_tensor_list[c_idx][:n_init], std=torch.ones(n_init)/10) for c_idx in range(c_num)]
     
             _cbo_m = DK_BO_AE_C_M(x_tensor, y_tensor, c_tensor_list, None, None, 
                                     lr=lr, spectrum_norm=spectrum_norm, 
