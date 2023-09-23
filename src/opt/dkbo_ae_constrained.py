@@ -327,6 +327,7 @@ class DK_BO_AE_C_M():
         self.maximum = torch.max(self.y_tensor[feasible_filter]) if max==None else max
         self.max_regret = self.maximum - torch.min(self.y_tensor)
 
+        self.noisy_obs = kwargs.get('noisy_obs', False)
         self.init_x = kwargs.get("init_x", self.x_tensor[:n_init])        
         self.init_y = kwargs.get("init_y", self.y_tensor[:n_init])
         self.init_c_list = kwargs.get("init_c_list", [c_tensor[:n_init] for c_tensor in self.c_tensor_list])
@@ -443,10 +444,16 @@ class DK_BO_AE_C_M():
 
     def update_obs(self, candidate_idx):
         self.init_x = torch.cat([self.init_x, self.x_tensor[candidate_idx].reshape(1,-1)], dim=0)
-        self.init_y = torch.cat([self.init_y, self.y_tensor[candidate_idx].reshape(1,-1)])
-        for c_idx in range(self.c_num):
-            self.init_c_list[c_idx] = torch.cat([self.init_c_list[c_idx], self.c_tensor_list[c_idx][candidate_idx].reshape(1,-1)])
-            assert self.init_x.size(0) == self.init_c_list[c_idx].size(0)
+        if not self.noisy_obs:
+            self.init_y = torch.cat([self.init_y, self.y_tensor[candidate_idx].reshape(1,-1)])
+            for c_idx in range(self.c_num):
+                self.init_c_list[c_idx] = torch.cat([self.init_c_list[c_idx], self.c_tensor_list[c_idx][candidate_idx].reshape(1,-1)])
+                assert self.init_x.size(0) == self.init_c_list[c_idx].size(0)
+        else:
+            self.init_y = torch.cat([self.init_y, torch.normal(self.y_tensor[candidate_idx].reshape(1,-1), std=torch.ones(1)/1e1)])
+            for c_idx in range(self.c_num):
+                self.init_c_list[c_idx] = torch.cat([self.init_c_list[c_idx], torch.normal(self.c_tensor_list[c_idx][candidate_idx].reshape(1,-1), std=torch.ones(1)/1e3)])
+                assert self.init_x.size(0) == self.init_c_list[c_idx].size(0)
         assert self.init_x.size(0) == self.init_y.size(0)
         self.n_init = self.init_x.size(0)
         self.observed[candidate_idx] = 1

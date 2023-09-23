@@ -547,7 +547,7 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
                 _cbo_m = DK_BO_AE_C_M(x_tensor, y_tensor, c_tensor_list, roi_filter, c_uci_filter_list, lr=lr, spectrum_norm=spectrum_norm, low_dim=low_dim,
                                     n_init=n_init,  train_iter=train_times, regularize=regularize, dynamic_weight=False,  retrain_nn=retrain_nn, c_threshold_list=c_threshold_list,
                                     max=max_val, pretrained_nn=ae, verbose=verbose, init_x=init_x, init_y=init_y, init_c_list=init_c_list, exact_gp=exact_gp, noise_constraint=roi_noise_constraint,
-                                    f_model=_f_model_passed_in, c_model_list=_c_model_list_passed_in, observed=observed, interpolate_prior=interpolate)
+                                    f_model=_f_model_passed_in, c_model_list=_c_model_list_passed_in, observed=observed, interpolate_prior=interpolate, noisy_obs=noisy_obs)
 
                 _roi_f_lcb, _roi_f_ucb = _cbo_m.f_model.CI(x_tensor)
                 _roi_c_lcb_list, _roi_c_ucb_list  = model_list_CI(_cbo_m.c_model_list, x_tensor, DEVICE)
@@ -803,6 +803,7 @@ def baseline_cbo_m(x_tensor, y_tensor, c_tensor_list,
                                     init_c_list=init_c_list, exact_gp=exact_gp, 
                                     noise_constraint=global_noise_constraint,
                                     interpolate_prior=interpolate,
+                                    noisy_obs=noisy_obs,
                                 )
             # optimize f and passively learn c
             _cbo_m.query_f_passive_c(n_iter=n_iter, acq=acq, retrain_interval=1, if_tqdm=True)
