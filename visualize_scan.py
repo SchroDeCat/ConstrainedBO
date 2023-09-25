@@ -45,19 +45,22 @@ for idx, c_portion in enumerate(np.linspace(.1, .9, 5)):
     # res/illustration/tmlr_Rastrigin 1D_P10%.png
     img = Image.open(f"{IMG_DIR}tmlr_Rastrigin 1D_P{c_portion:.0%}.png")
     ax = plt.subplot(2, 5, idx+1)
-    ax.imshow(img)
+    plt.axis('off')
+    ax.imshow(img, aspect='auto')
     ax = plt.subplot(2, 5, idx+6)
     
     visualize_regret(ax=ax, RES=RES_num, fontsize=fontsize, n_repeat=15, n_iter=2500)
     ax.set_title(f"Rastrigin-1D-1C-{c_portion:.2%}")
+    # plt.legend()
 
 handles, labels = ax.get_legend_handles_labels()
+# plt.subplots_adjust(hspace=0, wspace=0)
 
 
-
+# TODO: split the actual visualization.
 
 # plot results
-# plt.tight_layout()
+plt.tight_layout()
 fig.legend(handles, labels, loc='upper center', ncol=len(labels))
 plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.3, hspace=None)
 plt.savefig("simple_regret_scan.png")
