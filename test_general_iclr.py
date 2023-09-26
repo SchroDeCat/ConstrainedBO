@@ -14,7 +14,6 @@ EXPS = ['rastrigin_1d', 'rastrigin_10d', 'ackley_5d', 'ackley_10d','rosenbrock_5
         'water_converter_32d', 'water_converter_32d_neg', 'water_converter_32d_neg_3c', 'gpu_performance_16d', 
         'vessel_4d_3c', 'car_cab_7d_8c', 'spring_3d_6c']
 METHODs = ['cbo',  'qei', 'scbo', 'ts','random', 'cmes-ibo', ]
-NOISE = True
 
 
 def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_times:int=5, n_iter:int=20, n_init:int=10, 
@@ -24,10 +23,7 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
     method = method.lower()
     assert exp in EXPS
     assert method in METHODs
-    if c_portion is None:
-        name = f"{exp.upper()}{'_noise' if NOISE else ''}"
-    else:
-        name = f"{exp.upper()}-CP{c_portion:.2% if c_portion is None}{'_noise' if NOISE else ''}"
+    name = f"{exp.upper()}"
     lr = 1e-4
   
     ### exp
@@ -48,21 +44,13 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         feasible_filter = cbo_factory.feasible_filter
         y_tensor = cbo_factory.y_tensor
         constrain_noise = False
-        # interpolate = False
-        # filter_beta = 1
-        # beta = 1
-        filter_beta = 2
-        # beta = .5
 
-        # filter_beta = 1
-        # beta = 2
-        beta = 2
-        # beta = .8
+        filter_beta = 1
+        beta = 2.90
         cbo_factory.visualize_1d()
     elif exp == "ackley_5d":
         # cbo_factory = Constrained_Data_Factory(num_pts=100000)
-        # cbo_factory = Constrained_Data_Factory(num_pts=20000//2)
-        cbo_factory = Constrained_Data_Factory(num_pts=20000)
+        cbo_factory = Constrained_Data_Factory(num_pts=20000//2)
         scbo = 'scbo' in method
         if scbo:
             x_tensor, y_func, c_func_list = cbo_factory.ackley_5D_2C(scbo_format=scbo)
@@ -73,13 +61,9 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         y_tensor = cbo_factory.y_tensor
         cbo_factory.visualize_1d(if_norm=True)
 
-        # beta = .1
-        # filter_beta = 4
-        # constrain_noise = True
-
-        constrain_noise = False
-        beta = 0
-        filter_beta = 0
+        beta = .1
+        filter_beta = 4
+        constrain_noise = True
 
     elif exp == "rosenbrock_5d":
         cbo_factory = Constrained_Data_Factory(num_pts=50000)
@@ -206,10 +190,10 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
                                 spectrum_norm=False, retrain_interval=1, acq=method, 
                                 verbose=True, lr=1e-4, name=name, 
                                 return_result=True, retrain_nn=True,
-                                plot_result=True, save_result=True, save_path=f'./res/scan', 
+                                plot_result=True, save_result=True, save_path=f'./res/baseline/tmlr/{method}', 
                                 fix_seed=True,  pretrained=False, ae_loc=None, 
                                 exact_gp=exact_gp, constrain_noise=constrain_noise,
-                                interpolate=interpolate, noisy_obs=NOISE)
+                                interpolate=interpolate,)
         
     elif method == 'cbo':
 
@@ -226,9 +210,9 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
                     n_init=n_init, n_repeat=n_repeat, train_times=train_times, regularize=False, low_dim=low_dim,
                     spectrum_norm=False, retrain_interval=1, n_iter=n_iter, filter_interval=1, acq="ci", 
                     ci_intersection=False, verbose=True, lr=1e-4, name=name, return_result=True, retrain_nn=True,
-                    plot_result=True, save_result=True, save_path='./res/scan', fix_seed=True,  pretrained=False, ae_loc=None, 
+                    plot_result=True, save_result=True, save_path='./res/cbo/tmlr', fix_seed=True,  pretrained=False, ae_loc=None, 
                     _minimum_pick = 10, _delta = 0.01, beta=beta, filter_beta=filter_beta, exact_gp=exact_gp, constrain_noise=constrain_noise, 
-                    local_model=False,  interpolate=interpolate, noisy_obs=NOISE)
+                    local_model=False,  interpolate=interpolate,)
 
     elif method =='scbo':
         init_feasible_reward = y_tensor[:n_init][feasible_filter[:n_init]]
@@ -245,29 +229,9 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
             n_init=n_init, n_repeat=n_repeat, train_times=train_times, low_dim=low_dim,
             retrain_interval=1, n_iter=n_iter,
             verbose=True, lr=lr, name=name, return_result=True, 
-            plot_result=True, save_result=True, save_path='./res/scan', fix_seed=True,
+            plot_result=True, save_result=True, save_path='./res/scbo/tmlr', fix_seed=True,
             exact_gp=exact_gp, constrain_noise=constrain_noise, interpolate=interpolate)
 
-        # with warnings.catch_warnings():
-        #     warnings.simplefilter("ignore")
-        #     for rep in tqdm.tqdm(range(n_repeat), desc=f"Experiment Rep"):
-        #         # set seed
-        #         _seed = rep * 20 + n_init
-        #         torch.manual_seed(_seed)
-        #         np.random.seed(_seed)
-        #         random.seed(_seed)
-        #         torch.cuda.manual_seed(_seed)
-        #         torch.backends.cudnn.benchmark = False
-        #         torch.backends.cudnn.deterministic = True
-        #         batch_size = 1
-        #         scbo = SCBO(y_func, c_func_list, dim=cbo_factory.dim, lower_bound=cbo_factory.lb, upper_bound=cbo_factory.ub, 
-        #                             train_times=train_times, lr=lr,
-        #                             batch_size = batch_size, n_init=n_init, 
-        #                             train_X = x_tensor[:n_init].reshape([-1, cbo_factory.dim]), dk= True)
-
-        #         rewards = scbo.optimization(n_iter=n_iter//batch_size, x_tensor=x_tensor)
-        #         regrets = max_global - rewards
-        #         regret[rep] = regrets[-n_iter:]
     else:
         raise NotImplementedError(f"Method {method} no implemented")
 
@@ -276,53 +240,30 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
 
 
 if __name__ == "__main__":
-    # n_repeat = 10
-    # n_init = 10
-    # n_iter = 50
-    # train_times = 50
-    # n_repeat = 2
-    n_repeat = 15
+    # n_repeat = 15
+    n_repeat = 2
     n_init = 5
     n_init2 = 20
     n_init3 = 10
-    # n_iter = 30
-    n_iter = 200
+    n_iter = 2
     # n_iter = 50
-    # train_times = 5
+    # n_iter = 200
     train_times = 10
 
-    # experiment(n_init=5, method='qei')
-    # experiment(n_init=5, method='ts')
-    # experiment(n_init=5, method='cmes-ibo')
-    # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=40, method='scbo')
-    # experiment(n_init=5, method='cbo', n_iter=200)
+    for method in ['cbo', 'cmes-ibo']:
+        experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method=method)
+        experiment(exp='ackley_5d', n_init=n_init2, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method=method)
+        experiment(exp='water_converter_32d_neg_3c', n_init=n_init3, n_repeat=n_repeat, n_iter=n_iter, method=method)
+        experiment(exp="spring_3d_6c", n_init=10, n_iter=n_iter, n_repeat=n_repeat, method=method)
+        experiment(exp="car_cab_7d_8c", n_init=5, n_iter=n_iter, n_repeat=n_repeat, method=method)
+        experiment(exp="vessel_4D_3C", n_init=2, n_iter=n_iter, n_repeat=n_repeat, method=method)
 
-    # for c_portion in tqdm.auto.tqdm(np.linspace(.1, .7, 4)):
-    #     experiment(exp=f"rastrigin_1d", n_init=5, n_repeat=15, n_iter=2500, train_times=1, method='cbo', c_portion=c_portion)
-    # for c_portion in tqdm.auto.tqdm(np.linspace(.1, .9, 5)):
-<<<<<<< HEAD
-    #     for method in ['cbo', 'cmes-ibo']:
-    #         experiment(exp=f"rastrigin_1d", n_init=5, n_repeat=15, n_iter=2500, train_times=1, method=method, c_portion=c_portion)
-=======
-    # experiment(exp=f"rastrigin_1d", n_init=5, n_repeat=2, n_iter=2500, train_times=1, method='scbo', c_portion=0.9)
-    for c_portion in tqdm.auto.tqdm(np.linspace(.5, .9, 3)):
-        # for method in ['cbo', 'cmes-ibo']:
-        # for method in METHODs:
-        #     if method in ['cbo', 'cmes-ibo', 'ts', 'random', 'scbo']:
-        #         continue
-        #     experiment(exp=f"rastrigin_1d", n_init=5, n_repeat=15, n_iter=2500, train_times=1, method=method, c_portion=c_portion)
-        experiment(exp=f"rastrigin_1d", n_init=5, n_repeat=15, n_iter=2500, train_times=1, method='scbo', c_portion=c_portion)
->>>>>>> a5063557054004ff8d10eec43b8e5ac7dfc044e0
-    # experiment(exp=f"rastrigin_1d", n_init=5, n_repeat=15, n_iter=2500, train_times=1, method='cbo', c_portion=0.9)
 
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='cbo')
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='qei')
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='ts')
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='cmes-ibo')
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='scbo')
-
-    for method in ['cbo', 'cmes-ibo']:
-        experiment(exp=f"ackley_5d", n_init=5, n_repeat=15, n_iter=200, train_times=1, method=method)
     # experiment(exp='ackley_5d', n_init=n_init2, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='cbo')
     # experiment(exp='ackley_5d', n_init=n_init2, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='qei')
     # experiment(exp='ackley_5d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='ts')

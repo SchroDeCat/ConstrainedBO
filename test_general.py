@@ -28,7 +28,7 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
   
     ### exp
     if exp == 'rastrigin_1d': # rastrigin 1D
-        cbo_factory = Constrained_Data_Factory(num_pts=20000)
+        cbo_factory = Constrained_Data_Factory(num_pts=20000 if c_portion is None else 1000)
         scbo = 'scbo' in method
         if not c_portion is None: # scanning the portion
             if scbo:
@@ -43,6 +43,17 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         constraint_threshold_list, constraint_confidence_list = cbo_factory.constraint_threshold_list, cbo_factory.constraint_confidence_list
         feasible_filter = cbo_factory.feasible_filter
         y_tensor = cbo_factory.y_tensor
+        constrain_noise = False
+        # interpolate = False
+        # filter_beta = 1
+        # beta = 1
+        # filter_beta = 1
+        # beta = .5
+
+        filter_beta = 1
+        # beta = 2
+        beta = 2
+        # beta = .8
         cbo_factory.visualize_1d()
     elif exp == "ackley_5d":
         # cbo_factory = Constrained_Data_Factory(num_pts=100000)
@@ -161,8 +172,12 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         # beta = 10
         beta = 2
     elif exp == "car_cab_7d_8c":
+<<<<<<< HEAD
         # cbo_factory = Constrained_Data_Factory(num_pts=5000)
         cbo_factory = Constrained_Data_Factory(num_pts=20000)
+=======
+        cbo_factory = Constrained_Data_Factory(num_pts=1000)
+>>>>>>> a5063557054004ff8d10eec43b8e5ac7dfc044e0
         scbo = 'scbo' in method
         if scbo:
             x_tensor, y_func, c_func_list = cbo_factory.RE9_7D_8C(scbo_format=scbo)
@@ -175,11 +190,18 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         constrain_noise = False  
         # filter_beta = 2
         # beta = 2
+<<<<<<< HEAD
         # filter_beta = 20
         # beta = 20
         filter_beta = 2
         # beta = 10
         beta = 2
+=======
+        filter_beta = 4
+        beta = 40
+        # filter_beta = 2
+        # beta = 10
+>>>>>>> a5063557054004ff8d10eec43b8e5ac7dfc044e0
     else:
         raise NotImplementedError(f"Exp {exp} no implemented")
 
@@ -277,13 +299,18 @@ if __name__ == "__main__":
     n_iter = 200
     # n_iter = 50
     # train_times = 5
-    # train_times = 10
+    train_times = 10
 
     # experiment(n_init=5, method='qei')
     # experiment(n_init=5, method='ts')
     # experiment(n_init=5, method='cmes-ibo')
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=40, method='scbo')
     # experiment(n_init=5, method='cbo', n_iter=200)
+
+    for c_portion in np.linspace(.1, .9, 5):
+        for method in ['cbo', 'cmes-ibo']:
+            experiment(exp='rastrigin_1d', n_init=10, n_repeat=5, n_iter=2000, train_times=1, method=method, c_portion=c_portion)
+
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='cbo')
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='qei')
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='ts')
@@ -310,27 +337,31 @@ if __name__ == "__main__":
     # experiment(exp='water_converter_32d_neg_3c', n_init=n_init3, n_repeat=n_repeat, n_iter=n_iter, method='qei', )
     # experiment(exp='water_converter_32d_neg_3c', n_init=n_init3, n_repeat=n_repeat, n_iter=n_iter, method='cmes-ibo', )
 
-    for method in METHODs:
-        # if method in ['cbo', 'cmes-ibo']:
-        if method in ['ts', 'random']:
-            continue
-        # experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method=method, constrain_noise=True)
-        experiment(exp="vessel_4D_3C", n_init=2, n_iter=200, n_repeat=15, method=method)
+    # for method in METHODs:
+    #     if method in ['cbo', 'cmes-ibo', 'qei']:
+    #         continue
+    #     if method in ['ts', 'random']:
+    #         continue
+    #     # experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method=method, constrain_noise=True)
+    #     experiment(exp="vessel_4D_3C", n_init=2, n_iter=200, n_repeat=16, method=method)
 
-    for method in METHODs:
-        # if method in ['cbo', 'qei']:
-        #     continue
-        if method in ['ts', 'random']:
-            continue
-        # experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method=method, constrain_noise=True)
-        experiment(exp="car_cab_7d_8c", n_init=5, n_iter=200, n_repeat=15, method=method)
-
-
-    for method in METHODs:
+    # for method in METHODs:
     #     # if method in ['cbo', 'qei']:
     #     #     continue
-        if method in ['ts', 'random']:
-            continue
-        # experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method=method, constrain_noise=True)
-        experiment(exp="spring_3d_6c", n_init=10, n_iter=200, n_repeat=15, method=method)
-    # experiment(exp='spring_3d_6c', n_init=10, n_repeat=10, n_iter=n_iter, method='scbo')
+    #     if method in ['ts', 'random']:
+    #         continue
+    #     # experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method=method, constrain_noise=True)
+    #     # experiment(exp="car_cab_7d_8c", n_init=5, n_iter=200, n_repeat=16, method=method)
+    #     experiment(exp="car_cab_7d_8c", n_init=5, n_iter=200, n_repeat=16, method=method)
+    # experiment(exp="car_cab_7d_8c", n_init=5, n_iter=200, n_repeat=16,  method='scbo')
+
+
+    # for method in METHODs:
+    #     if method in ['cbo', 'cmes-ibo', 'qei']:
+    #         continue
+    #     if method in ['ts', 'random']:
+    #         continue
+    #     # experiment(exp='water_converter_32d_neg_3c', n_init=20, n_repeat=10, n_iter=100, method=method, constrain_noise=True)
+    #     experiment(exp="spring_3d_6c", n_init=10, n_iter=200, n_repeat=16, method=method)
+    # # experiment(exp='spring_3d_6c', n_init=10, n_repeat=10, n_iter=n_iter, method='scbo')
+    # experiment(exp="spring_3d_6c", n_init=10, n_iter=200, n_repeat=16,  method='scbo')
