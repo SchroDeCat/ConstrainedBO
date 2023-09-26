@@ -142,8 +142,6 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         y_tensor = cbo_factory.y_tensor
         cbo_factory.visualize_1d(if_norm=True)
         constrain_noise = False
-        filter_beta = 2
-        beta = 2
 
     elif exp == "spring_3d_6c":
         # cbo_factory = Constrained_Data_Factory(num_pts=10000)
@@ -232,23 +230,19 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
 
 if __name__ == "__main__":
     # n_repeat = 15
-    n_repeat = 10
+    n_repeat = 15
     # n_repeat = 2
-    n_init = 5
-    n_init2 = 20
-    n_init3 = 10
     # n_iter = 2
     n_iter = 50
     # n_iter = 200
-    train_times = 10
 
     for method in ['cbo', 'cmes-ibo']:
-        experiment(exp='rastrigin_1d', n_init=5, n_repeat=n_repeat, n_iter=n_iter, train_times=10, method=method)
-        experiment(exp='ackley_5d', n_init=20, n_repeat=n_repeat, n_iter=n_iter,  method=method)
-        experiment(exp='water_converter_32d_neg_3c', n_init=10, n_repeat=n_repeat, n_iter=n_iter, method=method)
-        experiment(exp="spring_3d_6c", n_init=10, n_iter=n_iter, n_repeat=n_repeat, method=method)
-        experiment(exp="car_cab_7d_8c", n_init=5, n_iter=n_iter, n_repeat=n_repeat, method=method)
-        experiment(exp="vessel_4D_3C", n_init=2, n_iter=n_iter, n_repeat=n_repeat, method=method)
+        experiment(exp='rastrigin_1d',                  n_init=5,   n_iter=n_iter,  n_repeat=n_repeat, method=method, train_times=10, )
+        experiment(exp='ackley_5d',                     n_init=20,  n_iter=n_iter,  n_repeat=n_repeat, method=method)
+        experiment(exp='water_converter_32d_neg_3c',    n_init=10,  n_iter=n_iter,  n_repeat=n_repeat, method=method)
+        experiment(exp="spring_3d_6c",                  n_init=10,  n_iter=n_iter,  n_repeat=n_repeat, method=method)
+        experiment(exp="car_cab_7d_8c",                 n_init=5,   n_iter=n_iter,  n_repeat=n_repeat, method=method)
+        experiment(exp="vessel_4D_3C",                  n_init=2,   n_iter=n_iter,  n_repeat=n_repeat, method=method)
 
 
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='cbo')
