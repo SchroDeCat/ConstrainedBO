@@ -140,10 +140,13 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         constrain_noise = False
         # filter_beta = 2
         # beta = 2
+        filter_beta = 2
+        beta = 2
 
     elif exp == "spring_3d_6c":
         # cbo_factory = Constrained_Data_Factory(num_pts=10000)
-        cbo_factory = Constrained_Data_Factory(num_pts=2000)
+        # cbo_factory = Constrained_Data_Factory(num_pts=2000)
+        cbo_factory = Constrained_Data_Factory(num_pts=20000)
         scbo = 'scbo' in method
         if scbo:
             x_tensor, y_func, c_func_list = cbo_factory.RE2_3D_6C(scbo_format=scbo)
@@ -154,8 +157,12 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         y_tensor = cbo_factory.y_tensor
         cbo_factory.visualize_1d(if_norm=True)
         constrain_noise = False  
+        filter_beta = 2
+        # beta = 10
+        beta = 2
     elif exp == "car_cab_7d_8c":
-        cbo_factory = Constrained_Data_Factory(num_pts=5000)
+        # cbo_factory = Constrained_Data_Factory(num_pts=5000)
+        cbo_factory = Constrained_Data_Factory(num_pts=20000)
         scbo = 'scbo' in method
         if scbo:
             x_tensor, y_func, c_func_list = cbo_factory.RE9_7D_8C(scbo_format=scbo)
@@ -171,7 +178,8 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         # filter_beta = 20
         # beta = 20
         filter_beta = 2
-        beta = 10
+        # beta = 10
+        beta = 2
     else:
         raise NotImplementedError(f"Exp {exp} no implemented")
 
@@ -266,8 +274,8 @@ if __name__ == "__main__":
     n_init2 = 20
     n_init3 = 10
     # n_iter = 30
-    # n_iter = 200
-    n_iter = 50
+    n_iter = 200
+    # n_iter = 50
     # train_times = 5
     # train_times = 10
 
