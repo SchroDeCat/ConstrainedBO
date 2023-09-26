@@ -142,12 +142,13 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         y_tensor = cbo_factory.y_tensor
         cbo_factory.visualize_1d(if_norm=True)
         constrain_noise = False
-        # filter_beta = 2
-        # beta = 2
+        filter_beta = 2
+        beta = 2
 
     elif exp == "spring_3d_6c":
         # cbo_factory = Constrained_Data_Factory(num_pts=10000)
-        cbo_factory = Constrained_Data_Factory(num_pts=2000)
+        # cbo_factory = Constrained_Data_Factory(num_pts=2000)
+        cbo_factory = Constrained_Data_Factory(num_pts=20000)
         scbo = 'scbo' in method
         if scbo:
             x_tensor, y_func, c_func_list = cbo_factory.RE2_3D_6C(scbo_format=scbo)
@@ -158,8 +159,11 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         y_tensor = cbo_factory.y_tensor
         cbo_factory.visualize_1d(if_norm=True)
         constrain_noise = False  
+        filter_beta = 2
+        beta = 2
     elif exp == "car_cab_7d_8c":
-        cbo_factory = Constrained_Data_Factory(num_pts=1000)
+        # cbo_factory = Constrained_Data_Factory(num_pts=5000)
+        cbo_factory = Constrained_Data_Factory(num_pts=20000)
         scbo = 'scbo' in method
         if scbo:
             x_tensor, y_func, c_func_list = cbo_factory.RE9_7D_8C(scbo_format=scbo)
@@ -170,12 +174,8 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         y_tensor = cbo_factory.y_tensor
         cbo_factory.visualize_1d(if_norm=True)   
         constrain_noise = False  
-        # filter_beta = 2
-        # beta = 2
-        filter_beta = 4
-        beta = 40
-        # filter_beta = 2
-        # beta = 10
+        filter_beta = 2
+        beta = 2
     else:
         raise NotImplementedError(f"Exp {exp} no implemented")
 
@@ -190,27 +190,18 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
                                 spectrum_norm=False, retrain_interval=1, acq=method, 
                                 verbose=True, lr=1e-4, name=name, 
                                 return_result=True, retrain_nn=True,
-                                plot_result=True, save_result=True, save_path=f'./res/baseline/tmlr/{method}', 
+                                plot_result=True, save_result=True, save_path=f'./res/baseline/test/{method}', 
                                 fix_seed=True,  pretrained=False, ae_loc=None, 
                                 exact_gp=exact_gp, constrain_noise=constrain_noise,
                                 interpolate=interpolate,)
         
     elif method == 'cbo':
-
-        # regret = cbo_multi(x_tensor, y_tensor, c_tensor_list, 
-        #             constraint_threshold_list=constraint_threshold_list, constraint_confidence_list=constraint_confidence_list,
-        #             n_init=n_init, n_repeat=n_repeat, train_times=train_times, regularize=False, low_dim=False,
-        #             spectrum_norm=False, retrain_interval=1, n_iter=n_iter, filter_interval=1, acq="ci", 
-        #             ci_intersection=True, verbose=True, lr=1e-4, name=name, return_result=True, retrain_nn=True,
-        #             plot_result=True, save_result=True, save_path='./res/cbo/tmlr', fix_seed=True,  pretrained=False, ae_loc=None, 
-        #             _minimum_pick = 10, _delta = 0.01, beta=0.5, filter_beta=0.5, exact_gp=False, constrain_noise=constrain_noise, 
-        #             local_model=False,  interpolate=interpolate,)
         regret = cbo_multi(x_tensor, y_tensor, c_tensor_list, 
                     constraint_threshold_list=constraint_threshold_list, constraint_confidence_list=constraint_confidence_list,
                     n_init=n_init, n_repeat=n_repeat, train_times=train_times, regularize=False, low_dim=low_dim,
                     spectrum_norm=False, retrain_interval=1, n_iter=n_iter, filter_interval=1, acq="ci", 
                     ci_intersection=False, verbose=True, lr=1e-4, name=name, return_result=True, retrain_nn=True,
-                    plot_result=True, save_result=True, save_path='./res/cbo/tmlr', fix_seed=True,  pretrained=False, ae_loc=None, 
+                    plot_result=True, save_result=True, save_path='./res/cbo/test', fix_seed=True,  pretrained=False, ae_loc=None, 
                     _minimum_pick = 10, _delta = 0.01, beta=beta, filter_beta=filter_beta, exact_gp=exact_gp, constrain_noise=constrain_noise, 
                     local_model=False,  interpolate=interpolate,)
 
@@ -229,7 +220,7 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
             n_init=n_init, n_repeat=n_repeat, train_times=train_times, low_dim=low_dim,
             retrain_interval=1, n_iter=n_iter,
             verbose=True, lr=lr, name=name, return_result=True, 
-            plot_result=True, save_result=True, save_path='./res/scbo/tmlr', fix_seed=True,
+            plot_result=True, save_result=True, save_path='./res/scbo/test', fix_seed=True,
             exact_gp=exact_gp, constrain_noise=constrain_noise, interpolate=interpolate)
 
     else:
@@ -241,19 +232,20 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
 
 if __name__ == "__main__":
     # n_repeat = 15
-    n_repeat = 2
+    n_repeat = 10
+    # n_repeat = 2
     n_init = 5
     n_init2 = 20
     n_init3 = 10
-    n_iter = 2
-    # n_iter = 50
+    # n_iter = 2
+    n_iter = 50
     # n_iter = 200
     train_times = 10
 
     for method in ['cbo', 'cmes-ibo']:
-        experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method=method)
-        experiment(exp='ackley_5d', n_init=n_init2, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method=method)
-        experiment(exp='water_converter_32d_neg_3c', n_init=n_init3, n_repeat=n_repeat, n_iter=n_iter, method=method)
+        experiment(exp='rastrigin_1d', n_init=5, n_repeat=n_repeat, n_iter=n_iter, train_times=10, method=method)
+        experiment(exp='ackley_5d', n_init=20, n_repeat=n_repeat, n_iter=n_iter,  method=method)
+        experiment(exp='water_converter_32d_neg_3c', n_init=10, n_repeat=n_repeat, n_iter=n_iter, method=method)
         experiment(exp="spring_3d_6c", n_init=10, n_iter=n_iter, n_repeat=n_repeat, method=method)
         experiment(exp="car_cab_7d_8c", n_init=5, n_iter=n_iter, n_repeat=n_repeat, method=method)
         experiment(exp="vessel_4D_3C", n_init=2, n_iter=n_iter, n_repeat=n_repeat, method=method)
