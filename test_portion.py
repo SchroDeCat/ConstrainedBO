@@ -24,7 +24,10 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
     method = method.lower()
     assert exp in EXPS
     assert method in METHODs
-    name = f"{exp.upper()}-CP{c_portion:.2%}{'_noise' if NOISE else ''}"
+    if c_portion is None:
+        name = f"{exp.upper()}{'_noise' if NOISE else ''}"
+    else:
+        name = f"{exp.upper()}-CP{c_portion:.2% if c_portion is None}{'_noise' if NOISE else ''}"
     lr = 1e-4
   
     ### exp
@@ -58,7 +61,8 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         cbo_factory.visualize_1d()
     elif exp == "ackley_5d":
         # cbo_factory = Constrained_Data_Factory(num_pts=100000)
-        cbo_factory = Constrained_Data_Factory(num_pts=20000//2)
+        # cbo_factory = Constrained_Data_Factory(num_pts=20000//2)
+        cbo_factory = Constrained_Data_Factory(num_pts=20000)
         scbo = 'scbo' in method
         if scbo:
             x_tensor, y_func, c_func_list = cbo_factory.ackley_5D_2C(scbo_format=scbo)
@@ -69,9 +73,13 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         y_tensor = cbo_factory.y_tensor
         cbo_factory.visualize_1d(if_norm=True)
 
-        beta = .1
-        filter_beta = 4
-        constrain_noise = True
+        # beta = .1
+        # filter_beta = 4
+        # constrain_noise = True
+
+        constrain_noise = False
+        beta = 0
+        filter_beta = 0
 
     elif exp == "rosenbrock_5d":
         cbo_factory = Constrained_Data_Factory(num_pts=50000)
@@ -292,13 +300,16 @@ if __name__ == "__main__":
     # for c_portion in tqdm.auto.tqdm(np.linspace(.1, .9, 5)):
     #     for method in ['cbo', 'cmes-ibo']:
     #         experiment(exp=f"rastrigin_1d", n_init=5, n_repeat=15, n_iter=2500, train_times=1, method=method, c_portion=c_portion)
-    experiment(exp=f"rastrigin_1d", n_init=5, n_repeat=15, n_iter=2500, train_times=1, method='cbo', c_portion=0.9)
+    # experiment(exp=f"rastrigin_1d", n_init=5, n_repeat=15, n_iter=2500, train_times=1, method='cbo', c_portion=0.9)
 
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='cbo')
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='qei')
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='ts')
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='cmes-ibo')
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='scbo')
+
+    for method in ['cbo', 'cmes-ibo']:
+        experiment(exp=f"ackley_5d", n_init=5, n_repeat=15, n_iter=200, train_times=1, method=method)
     # experiment(exp='ackley_5d', n_init=n_init2, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='cbo')
     # experiment(exp='ackley_5d', n_init=n_init2, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='qei')
     # experiment(exp='ackley_5d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='ts')
