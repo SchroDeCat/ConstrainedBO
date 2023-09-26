@@ -90,7 +90,7 @@ ax.set_title("Car_Cabin-7D-8C")
 
 # spring
 RES_num = {}
-RES_num["CBO"] = np.load(f"{CBO_DIR}OL-Regret-Figure_SPRING_3D_6C-InterP-B10.00-FB10.00-RI1--none-ci-R15-P2-T200_I1_L4-TI5-USexact.npy")
+RES_num["CBO"] = np.load(f"{CBO_DIR}OL-Regret-Figure_SPRING_3D_6C-InterP-B2.00-FB2.00-RI1--none-ci-R15-P2-T200_I1_L4-TI5-USexact.npy")
 RES_num["CMES-IBO"] = np.load(f"{BASELINE_DIR}cmes-ibo/OL-Regret-Figure_SPRING_3D_6C-InterP-RI1--none-cmes-ibo-R15-P2-T200_I1_L4-TI5-USexact.npy")
 RES_num["cEI"] = np.load(f"{BASELINE_DIR}qei/OL-Regret-Figure_SPRING_3D_6C-InterP-RI1--none-qei-R15-P2-T200_I1_L4-TI5-USexact.npy")
 RES_num["SCBO"] = np.load(f"{SCBO_DIR}OL-Regret-Figure_SPRING_3D_6C-InterP-RI1--none-scbo-R15-P2-T200_I1_L4-TI5-USexact.npy")
