@@ -36,9 +36,15 @@ def visualize_regret(ax: plt.Axes, RES: dict, fontsize:int=14, n_repeat:int=15,
 
 # ras-1d-1c
 RES_num = {}
-RES_num["CBO"] = np.load(f"{CBO_DIR}OL-Regret-Figure_RASTRIGIN_1D-noise_c-InterP-B10.00-FB10.00-RI1--none-ci-R15-P2-T200_I1_L4-TI10-USexact.npy")
-RES_num["CMES-IBO"] = np.load(f"{BASELINE_DIR}cmes-ibo/OL-Regret-Figure_RASTRIGIN_1D-noise_c-InterP-RI1--none-cmes-ibo-R15-P2-T200_I1_L4-TI10-USexact.npy")
-RES_num["cEI"] = np.load(f"{BASELINE_DIR}qei/OL-Regret-Figure_RASTRIGIN_1D-noise_c-InterP-RI1--none-qei-R15-P2-T200_I1_L4-TI10-USexact.npy")
+# RES_num["CBO"] = np.load(f"{CBO_DIR}OL-Regret-Figure_RASTRIGIN_1D-noise_c-InterP-B10.00-FB10.00-RI1--none-ci-R15-P2-T200_I1_L4-TI10-USexact.npy")
+# RES_num["CMES-IBO"] = np.load(f"{BASELINE_DIR}cmes-ibo/OL-Regret-Figure_RASTRIGIN_1D-noise_c-InterP-RI1--none-cmes-ibo-R15-P2-T200_I1_L4-TI10-USexact.npy")
+# RES_num["cEI"] = np.load(f"{BASELINE_DIR}qei/OL-Regret-Figure_RASTRIGIN_1D-noise_c-InterP-RI1--none-qei-R15-P2-T200_I1_L4-TI10-USexact.npy")
+# RES_num["SCBO"] = np.load(f"{SCBO_DIR}OL-Regret-Figure_RASTRIGIN_1D-InterP-RI1--none-scbo-R15-P2-T200_I1_L4-TI10-USexact.npy")
+
+# RES_num["CBO"] = np.load(f"{CBO_DIR}OL-Regret-Figure_RASTRIGIN_1D-InterP-B1.00-FB1.00-RI1--none-ci-R15-P2-T200_I1_L4-TI10-USexact.npy")
+RES_num["CBO"] = np.load(f"{CBO_DIR}OL-Regret-Figure_RASTRIGIN_1D-InterP-B2.90-FB1.00-RI1--none-ci-R15-P2-T200_I1_L4-TI10-USexact.npy")
+RES_num["CMES-IBO"] = np.load(f"{BASELINE_DIR}cmes-ibo/OL-Regret-Figure_RASTRIGIN_1D-InterP-RI1--none-cmes-ibo-R15-P2-T200_I1_L4-TI10-USexact.npy")
+RES_num["cEI"] = np.load(f"{BASELINE_DIR}qei/OL-Regret-Figure_RASTRIGIN_1D-InterP-RI1--none-qei-R15-P2-T200_I1_L4-TI10-USexact.npy")
 RES_num["SCBO"] = np.load(f"{SCBO_DIR}OL-Regret-Figure_RASTRIGIN_1D-InterP-RI1--none-scbo-R15-P2-T200_I1_L4-TI10-USexact.npy")
 
 ax = plt.subplot(2,3,1)
@@ -103,5 +109,5 @@ ax.set_title("spring-3D-6C")
 # plt.tight_layout()
 fig.legend(handles, labels, loc='upper center', ncol=len(labels))
 plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.3, hspace=None)
-plt.savefig("simple_regret.png")
+plt.savefig("simple_regret.pdf")
 # plt.show()

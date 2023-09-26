@@ -44,16 +44,9 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         feasible_filter = cbo_factory.feasible_filter
         y_tensor = cbo_factory.y_tensor
         constrain_noise = False
-        # interpolate = False
-        # filter_beta = 1
-        # beta = 1
-        # filter_beta = 1
-        # beta = .5
 
         filter_beta = 1
-        # beta = 2
-        beta = 2
-        # beta = .8
+        beta = 2.90
         cbo_factory.visualize_1d()
     elif exp == "ackley_5d":
         # cbo_factory = Constrained_Data_Factory(num_pts=100000)
@@ -239,26 +232,6 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
             plot_result=True, save_result=True, save_path='./res/scbo/tmlr', fix_seed=True,
             exact_gp=exact_gp, constrain_noise=constrain_noise, interpolate=interpolate)
 
-        # with warnings.catch_warnings():
-        #     warnings.simplefilter("ignore")
-        #     for rep in tqdm.tqdm(range(n_repeat), desc=f"Experiment Rep"):
-        #         # set seed
-        #         _seed = rep * 20 + n_init
-        #         torch.manual_seed(_seed)
-        #         np.random.seed(_seed)
-        #         random.seed(_seed)
-        #         torch.cuda.manual_seed(_seed)
-        #         torch.backends.cudnn.benchmark = False
-        #         torch.backends.cudnn.deterministic = True
-        #         batch_size = 1
-        #         scbo = SCBO(y_func, c_func_list, dim=cbo_factory.dim, lower_bound=cbo_factory.lb, upper_bound=cbo_factory.ub, 
-        #                             train_times=train_times, lr=lr,
-        #                             batch_size = batch_size, n_init=n_init, 
-        #                             train_X = x_tensor[:n_init].reshape([-1, cbo_factory.dim]), dk= True)
-
-        #         rewards = scbo.optimization(n_iter=n_iter//batch_size, x_tensor=x_tensor)
-        #         regrets = max_global - rewards
-        #         regret[rep] = regrets[-n_iter:]
     else:
         raise NotImplementedError(f"Method {method} no implemented")
 
@@ -267,30 +240,24 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
 
 
 if __name__ == "__main__":
-    # n_repeat = 10
-    # n_init = 10
-    # n_iter = 50
-    # train_times = 50
-    # n_repeat = 2
-    n_repeat = 15
+    # n_repeat = 15
+    n_repeat = 2
     n_init = 5
     n_init2 = 20
     n_init3 = 10
-    # n_iter = 30
-    n_iter = 200
+    n_iter = 2
     # n_iter = 50
-    # train_times = 5
+    # n_iter = 200
     train_times = 10
 
-    # experiment(n_init=5, method='qei')
-    # experiment(n_init=5, method='ts')
-    # experiment(n_init=5, method='cmes-ibo')
-    # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=40, method='scbo')
-    # experiment(n_init=5, method='cbo', n_iter=200)
+    for method in ['cbo', 'cmes-ibo']:
+        experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method=method)
+        experiment(exp='ackley_5d', n_init=n_init2, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method=method)
+        experiment(exp='water_converter_32d_neg_3c', n_init=n_init3, n_repeat=n_repeat, n_iter=n_iter, method=method)
+        experiment(exp="spring_3d_6c", n_init=10, n_iter=n_iter, n_repeat=n_repeat, method=method)
+        experiment(exp="car_cab_7d_8c", n_init=5, n_iter=n_iter, n_repeat=n_repeat, method=method)
+        experiment(exp="vessel_4D_3C", n_init=2, n_iter=n_iter, n_repeat=n_repeat, method=method)
 
-    for c_portion in np.linspace(.1, .9, 5):
-        for method in ['cbo', 'cmes-ibo']:
-            experiment(exp='rastrigin_1d', n_init=10, n_repeat=5, n_iter=2000, train_times=1, method=method, c_portion=c_portion)
 
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='cbo')
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='qei')
