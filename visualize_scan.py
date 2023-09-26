@@ -69,14 +69,18 @@ for idx, c_portion in enumerate(np.linspace(.1, .9, 5)):
         RES_num["cEI"] = np.load(f"{BASELINE_DIR}OL-Regret-Figure_RASTRIGIN_1D-CP{c_portion:.2%}_noise-InterP-RI1--none-qei-R15-P2-T2500_I1_L4-TI1-USexact.npy")
     except:
         pass
-    
+    try:
+        RES_num["SCBO"] = np.load(f"{BASELINE_DIR}OL-Regret-Figure_RASTRIGIN_1D-CP{c_portion:.2%}_noise-InterP-RI1--none-scbo-R15-P2-T2500_I1_L4-TI1-USexact.npy")
+    except:
+        pass
     # res/illustration/tmlr_Rastrigin 1D_P10%.png
     # img = Image.open(f"{IMG_DIR}tmlr_Rastrigin 1D_P{c_portion:.0%}.png")
     ax = plt.subplot(2, 5, idx+1)
     visualize_1d(c_portion=c_portion)
     # plt.axis('off')
     # ax.imshow(img, aspect='auto')
-    handles_1, labels_1 = ax.get_legend_handles_labels()
+    if idx == 0:
+        handles_1, labels_1 = ax.get_legend_handles_labels()
 
 
     ax = plt.subplot(2, 5, idx+6)
@@ -84,8 +88,8 @@ for idx, c_portion in enumerate(np.linspace(.1, .9, 5)):
     visualize_regret(ax=ax, RES=RES_num, fontsize=fontsize, n_repeat=15, n_iter=2500)
     ax.set_title(f"Rastrigin-1D-1C-{c_portion:.2%} Simple Regret")
     # plt.legend()
-
-    handles_2, labels_2 = ax.get_legend_handles_labels()
+    if idx == 0:
+        handles_2, labels_2 = ax.get_legend_handles_labels()
 # plt.subplots_adjust(hspace=0, wspace=0)
 
 

@@ -289,10 +289,18 @@ if __name__ == "__main__":
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=40, method='scbo')
     # experiment(n_init=5, method='cbo', n_iter=200)
 
+    # for c_portion in tqdm.auto.tqdm(np.linspace(.1, .7, 4)):
+    #     experiment(exp=f"rastrigin_1d", n_init=5, n_repeat=15, n_iter=2500, train_times=1, method='cbo', c_portion=c_portion)
     # for c_portion in tqdm.auto.tqdm(np.linspace(.1, .9, 5)):
-    #     for method in ['cbo', 'cmes-ibo']:
-    #         experiment(exp=f"rastrigin_1d", n_init=5, n_repeat=15, n_iter=2500, train_times=1, method=method, c_portion=c_portion)
-    experiment(exp=f"rastrigin_1d", n_init=5, n_repeat=15, n_iter=2500, train_times=1, method='cbo', c_portion=0.9)
+    # experiment(exp=f"rastrigin_1d", n_init=5, n_repeat=2, n_iter=2500, train_times=1, method='scbo', c_portion=0.9)
+    for c_portion in tqdm.auto.tqdm(np.linspace(.5, .9, 3)):
+        # for method in ['cbo', 'cmes-ibo']:
+        # for method in METHODs:
+        #     if method in ['cbo', 'cmes-ibo', 'ts', 'random', 'scbo']:
+        #         continue
+        #     experiment(exp=f"rastrigin_1d", n_init=5, n_repeat=15, n_iter=2500, train_times=1, method=method, c_portion=c_portion)
+        experiment(exp=f"rastrigin_1d", n_init=5, n_repeat=15, n_iter=2500, train_times=1, method='scbo', c_portion=c_portion)
+    # experiment(exp=f"rastrigin_1d", n_init=5, n_repeat=15, n_iter=2500, train_times=1, method='cbo', c_portion=0.9)
 
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='cbo')
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='qei')
