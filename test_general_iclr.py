@@ -61,7 +61,7 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         y_tensor = cbo_factory.y_tensor
         cbo_factory.visualize_1d(if_norm=True)
 
-        beta = .1
+        beta = .1 # actually is 10 here?
         filter_beta = 4
         constrain_noise = True
 
@@ -233,8 +233,8 @@ if __name__ == "__main__":
     n_repeat = 15
     # n_repeat = 2
     # n_iter = 2
-    n_iter = 50
-    # n_iter = 200
+    # n_iter = 50
+    n_iter = 200
 
     for method in ['cbo', 'cmes-ibo']:
         experiment(exp='rastrigin_1d',                  n_init=5,   n_iter=n_iter,  n_repeat=n_repeat, method=method, train_times=10, )
