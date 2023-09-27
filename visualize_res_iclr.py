@@ -30,7 +30,8 @@ def visualize_regret(ax: plt.Axes, RES: dict, fontsize:int=14, n_repeat:int=15,
         _mean, _std = _RES[:,:n_iter].mean(axis=0),  _RES[:,:n_iter].std(axis=0)
         ax.plot(_mean, label=method)
         ax.fill_between(_base, _mean - _std * coef, _mean + _std * coef, alpha=0.3)
-        ax.set_xlabel("Iteration", fontsize=-4)
+        ax.set_xlabel("Iteration", fontsize=fontsize)
+        ax.set_ylabel("Simple Regret", fontsize=fontsize)
         ax.yaxis.set_major_formatter(FormatStrFormatter('%.1e'))
 
 
@@ -44,7 +45,7 @@ RES_num["SCBO"] = np.load(f"{SCBO_DIR}OL-Regret-Figure_RASTRIGIN_1D-InterP-RI1--
 ax = plt.subplot(2,3,1)
 
 visualize_regret(ax=ax, RES=RES_num, fontsize=fontsize, n_repeat=15, n_iter=200)
-ax.set_title("Rastrigin-1D-1C")
+ax.set_title("Rastrigin-1D-1C-60%", fontsize=fontsize)
 handles, labels = ax.get_legend_handles_labels()
 
 # ackley-5D
@@ -55,7 +56,7 @@ RES_num["cEI"] = np.load(f"{BASELINE_DIR}qei/OL-Regret-Figure_ACKLEY_5D-noise_c-
 RES_num["SCBO"] = np.load(f"{SCBO_DIR}OL-Regret-Figure_ACKLEY_5D-InterP-RI1--none-scbo-R15-P2-T200_I1_L4-TI5-USexact.npy")
 ax = plt.subplot(2,3,2)
 visualize_regret(ax=ax, RES=RES_num, fontsize=fontsize, n_repeat=15, n_iter=100)
-ax.set_title("Ackley-5D-2C")
+ax.set_title("Ackley-5D-2C-14%", fontsize=fontsize)
 
 # Wave-Energy_Converter-36D
 RES_num = {}
@@ -65,7 +66,7 @@ RES_num["cEI"] = np.load(f"{BASELINE_DIR}qei/OL-Regret-Figure_WATER_CONVERTER_32
 RES_num["SCBO"] = np.load(f"{SCBO_DIR}OL-Regret-Figure_WATER_CONVERTER_32D_NEG_3C-InterP-RI1--none-scbo-R15-P2-T200_I1_L4-TI5-USexact.npy")
 ax = plt.subplot(2,3,3)
 visualize_regret(ax=ax, RES=RES_num, fontsize=fontsize, n_repeat=15, n_iter=200)
-ax.set_title("Converter-36D-3C")
+ax.set_title("Converter-36D-3C-27%", fontsize=fontsize)
 
 # vessel 
 RES_num = {}
@@ -75,7 +76,7 @@ RES_num["cEI"] = np.load(f"{BASELINE_DIR}qei/OL-Regret-Figure_VESSEL_4D_3C-Inter
 RES_num["SCBO"] = np.load(f"{SCBO_DIR}OL-Regret-Figure_VESSEL_4D_3C-InterP-RI1--none-scbo-R16-P2-T200_I1_L4-TI5-USexact.npy")
 ax = plt.subplot(2,3,4)
 visualize_regret(ax=ax, RES=RES_num, fontsize=fontsize, n_repeat=15, n_iter=200)
-ax.set_title("Vessel-4D-3C")
+ax.set_title("Vessel-4D-3C-78%", fontsize=fontsize)
 
 
 # car cabin
@@ -86,7 +87,7 @@ RES_num["cEI"] = np.load(f"{BASELINE_DIR}qei/OL-Regret-Figure_CAR_CAB_7D_8C-Inte
 RES_num["SCBO"] = np.load(f"{SCBO_DIR}OL-Regret-Figure_CAR_CAB_7D_8C-InterP-RI1--none-scbo-R15-P2-T200_I1_L4-TI5-USexact.npy")
 ax = plt.subplot(2,3,5)
 visualize_regret(ax=ax, RES=RES_num, fontsize=fontsize, n_repeat=15, n_iter=200)
-ax.set_title("Car_Cabin-7D-8C")
+ax.set_title("Car_Cabin-7D-8C-13%", fontsize=fontsize)
 
 # spring
 RES_num = {}
@@ -96,12 +97,12 @@ RES_num["cEI"] = np.load(f"{BASELINE_DIR}qei/OL-Regret-Figure_SPRING_3D_6C-Inter
 RES_num["SCBO"] = np.load(f"{SCBO_DIR}OL-Regret-Figure_SPRING_3D_6C-InterP-RI1--none-scbo-R15-P2-T200_I1_L4-TI5-USexact.npy")
 ax = plt.subplot(2,3,6)
 visualize_regret(ax=ax, RES=RES_num, fontsize=fontsize, n_repeat=15, n_iter=200)
-ax.set_title("spring-3D-6C")
+ax.set_title("Spring-3D-6C-0.38%", fontsize=fontsize)
 
 
 # plot results
 # plt.tight_layout()
 fig.legend(handles, labels, loc='upper center', ncol=len(labels))
-plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.3, hspace=None)
+plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.3, hspace=.4)
 plt.savefig("simple_regret_iclr.pdf")
 # plt.show()
