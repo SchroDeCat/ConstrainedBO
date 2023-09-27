@@ -48,6 +48,7 @@ warnings.filterwarnings("ignore")
 
 device = torch.device('cpu')
 dtype = torch.double
+RELOCATE = True
 
 @dataclass
 class ScboState:
@@ -127,10 +128,15 @@ class SCBO:
             state.length /= 2.0
             state.failure_counter = 0
 
-        if state.length < state.length_min:  # Restart when trust region becomes too small
-            state.restart_triggered = True
+        if state.length < state.length_min and RELOCATE:  # Restart when trust region becomes too small
+            # state.restart_triggered = True
+            state.restart_triggered = state.restart_triggered + 1 # turn it into counter to allow reasonable recentering.
+            self.state = ScboState(dim=self.dim, batch_size=self.batch_size) # flush state
+        else:
+            self.state = state                                               # keep current state
 
-        self.state = state  # probably not necessary
+        # keep the restart counter
+        self.state.restart_triggered = state.restart_triggered
 
     def update_state(self, Y_next, C_next):
         """Method used to update the TuRBO state after each step of optimization.
@@ -221,6 +227,9 @@ class SCBO:
 
         # Create the TR bounds
         x_center = X[Y.argmax(), :].clone()
+        if self.state.restart_triggered: # relocate
+            _center_idx = -min(state.restart_triggered+1, Y.squeeze().size(0))
+            x_center = X[Y.argsort()[_center_idx],:].clone() # no counter large
         tr_lb = torch.clamp(x_center - state.length / 2.0, 0.0, 1.0)
         tr_ub = torch.clamp(x_center + state.length / 2.0, 0.0, 1.0)
 

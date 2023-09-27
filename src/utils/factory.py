@@ -177,8 +177,7 @@ class Constrained_Data_Factory(Data_Factory):
         # self.c_func1 = lambda x: -(x+3)**2 + 0.64  # |x - -2| < 0.5
         # self.c_func1 = lambda x: -torch.abs(x+3.1)**(1/2) + .8 **(1/2) 
         self.c_func1 = lambda x: torch.abs(x+.7)**(1/2) - 2 **(1/2) 
-        self.c_func1_scbo = lambda x: -self.c_func1(x)
-        self.c_func_list = [self.c_func1_scbo]
+
         self.x_tensor = self._generate_x_tensor(dim=dim, num=self._num_pts).to(device=device, dtype=dtype)
         self.x_tensor_range = unnormalize(self.x_tensor, (self.lb, self.ub))
         self.y_tensor = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.objective, self.x_tensor).unsqueeze(-1)
@@ -194,6 +193,8 @@ class Constrained_Data_Factory(Data_Factory):
             self.constraint_threshold_list = [0]
             self.c_portion = (sum(self.c_tensor1 > 0) / self.c_tensor1.size(0)).detach().item()
         self.feasible_filter = feasible_filter_gen(self.c_tensor_list, self.constraint_threshold_list)
+        self.c_func1_scbo = lambda x: -self.c_func1(x) + self.constraint_threshold_list[0]
+        self.c_func_list = [self.c_func1_scbo]
 
         assert torch.any(self.feasible_filter)
 
