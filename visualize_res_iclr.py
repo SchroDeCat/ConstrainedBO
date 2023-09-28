@@ -2,9 +2,9 @@ import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 
-CBO_DIR = "./res/cbo/iclr/"
-SCBO_DIR = "./res/scbo/iclr/"
-BASELINE_DIR = "./res/baseline/iclr/"
+CBO_DIR = "./res/"
+SCBO_DIR = "./res/"
+BASELINE_DIR = "./res/"
 
 
 fig = plt.figure(figsize=[18, 10])
