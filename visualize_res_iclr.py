@@ -10,8 +10,8 @@ BASELINE_DIR = "./res/"
 fig = plt.figure(figsize=[18, 10])
 fontsize = 14
 
-n_repeat = 1
-n_iter = 2
+n_repeat = 15
+n_iter = 200
 
 def visualize_regret(ax: plt.Axes, RES: dict, fontsize:int=14, n_repeat:int=15, 
                     n_iter:int=100) -> None:
@@ -44,7 +44,7 @@ RES_num["SCBO"] = np.load(f"{SCBO_DIR}OL-Regret-Figure_RASTRIGIN_1D-InterP-RI1--
 
 ax = plt.subplot(1,3,1)
 
-visualize_regret(ax=ax, RES=RES_num, fontsize=fontsize, n_repeat=15, n_iter=200)
+visualize_regret(ax=ax, RES=RES_num, fontsize=fontsize, n_repeat=n_repeat, n_iter=n_iter)
 ax.set_title("Rastrigin-1D-1C-60%", fontsize=fontsize)
 handles, labels = ax.get_legend_handles_labels()
 
@@ -55,7 +55,7 @@ RES_num["CMES-IBO"] = np.load(f"{BASELINE_DIR}OL-Regret-Figure_ACKLEY_5D-noise_c
 RES_num["cEI"] = np.load(f"{BASELINE_DIR}OL-Regret-Figure_ACKLEY_5D-noise_c-InterP-RI1--none-qei-R{n_repeat}-P2-T{n_iter}_I1_L4-TI5-USexact.npy")
 RES_num["SCBO"] = np.load(f"{SCBO_DIR}OL-Regret-Figure_ACKLEY_5D-InterP-RI1--none-scbo-R{n_repeat}-P2-T{n_iter}_I1_L4-TI5-USexact.npy")
 ax = plt.subplot(1,3,2)
-visualize_regret(ax=ax, RES=RES_num, fontsize=fontsize, n_repeat=15, n_iter=100)
+visualize_regret(ax=ax, RES=RES_num, fontsize=fontsize, n_repeat=n_repeat, n_iter=n_iter)
 ax.set_title("Ackley-5D-2C-14%", fontsize=fontsize)
 
 # Wave-Energy_Converter-36D
@@ -65,7 +65,7 @@ RES_num["CMES-IBO"] = np.load(f"{BASELINE_DIR}OL-Regret-Figure_WATER_CONVERTER_3
 RES_num["cEI"] = np.load(f"{BASELINE_DIR}OL-Regret-Figure_WATER_CONVERTER_32D_NEG_3C-InterP-RI1--none-qei-R{n_repeat}-P2-T{n_iter}_I1_L4-TI5-USexact.npy")
 RES_num["SCBO"] = np.load(f"{SCBO_DIR}OL-Regret-Figure_WATER_CONVERTER_32D_NEG_3C-InterP-RI1--none-scbo-R{n_repeat}-P2-T{n_iter}_I1_L4-TI5-USexact.npy")
 ax = plt.subplot(1,3,3)
-visualize_regret(ax=ax, RES=RES_num, fontsize=fontsize, n_repeat=15, n_iter=200)
+visualize_regret(ax=ax, RES=RES_num, fontsize=fontsize, n_repeat=n_repeat, n_iter=n_iter)
 ax.set_title("Converter-36D-3C-27%", fontsize=fontsize)
 
 
