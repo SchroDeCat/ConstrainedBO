@@ -1,14 +1,13 @@
 import numpy as np
-import tqdm
 import torch
 from PIL import Image
 from src.utils import Constrained_Data_Factory
 from matplotlib import pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 
-CBO_DIR = "./res/scan/"
-SCBO_DIR = "./res/scan/"
-BASELINE_DIR = "./res/scan/"
+CBO_DIR = "./res/"
+SCBO_DIR = "./res/"
+BASELINE_DIR = "./res/"
 
 fig, axes = plt.subplots(2, 5,figsize=[30, 10], gridspec_kw={'height_ratios': [1, 1]})
 fontsize = 14
