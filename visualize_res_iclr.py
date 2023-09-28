@@ -9,8 +9,9 @@ BASELINE_DIR = "./res/baseline/iclr/"
 
 fig = plt.figure(figsize=[18, 10])
 fontsize = 14
-n_repeat = 10
-n_iter=50
+
+n_repeat = 15
+n_iter = 200
 
 def visualize_regret(ax: plt.Axes, RES: dict, fontsize:int=14, n_repeat:int=15, 
                     n_iter:int=100) -> None:
@@ -36,12 +37,12 @@ def visualize_regret(ax: plt.Axes, RES: dict, fontsize:int=14, n_repeat:int=15,
 
 # ras-1d-1c
 RES_num = {}
-RES_num["CBO"] = np.load(f"{CBO_DIR}OL-Regret-Figure_RASTRIGIN_1D-InterP-B2.90-FB1.00-RI1--none-ci-R15-P2-T200_I1_L4-TI10-USexact.npy")
-RES_num["CMES-IBO"] = np.load(f"{BASELINE_DIR}cmes-ibo/OL-Regret-Figure_RASTRIGIN_1D-InterP-RI1--none-cmes-ibo-R15-P2-T200_I1_L4-TI10-USexact.npy")
-RES_num["cEI"] = np.load(f"{BASELINE_DIR}qei/OL-Regret-Figure_RASTRIGIN_1D-InterP-RI1--none-qei-R15-P2-T200_I1_L4-TI10-USexact.npy")
-RES_num["SCBO"] = np.load(f"{SCBO_DIR}OL-Regret-Figure_RASTRIGIN_1D-InterP-RI1--none-scbo-R15-P2-T200_I1_L4-TI10-USexact.npy")
+RES_num["CBO"] = np.load(f"{CBO_DIR}OL-Regret-Figure_RASTRIGIN_1D-InterP-B2.90-FB1.00-RI1--none-ci-R{n_repeat}-P2-T{n_iter}_I1_L4-TI10-USexact.npy")
+RES_num["CMES-IBO"] = np.load(f"{BASELINE_DIR}cmes-ibo/OL-Regret-Figure_RASTRIGIN_1D-InterP-RI1--none-cmes-ibo-R{n_repeat}-P2-T{n_iter}_I1_L4-TI10-USexact.npy")
+RES_num["cEI"] = np.load(f"{BASELINE_DIR}qei/OL-Regret-Figure_RASTRIGIN_1D-InterP-RI1--none-qei-R{n_repeat}-P2-T{n_iter}_I1_L4-TI10-USexact.npy")
+RES_num["SCBO"] = np.load(f"{SCBO_DIR}OL-Regret-Figure_RASTRIGIN_1D-InterP-RI1--none-scbo-R{n_repeat}-P2-T{n_iter}_I1_L4-TI10-USexact.npy")
 
-ax = plt.subplot(2,3,1)
+ax = plt.subplot(1,3,1)
 
 visualize_regret(ax=ax, RES=RES_num, fontsize=fontsize, n_repeat=15, n_iter=200)
 ax.set_title("Rastrigin-1D-1C-60%", fontsize=fontsize)
@@ -49,54 +50,23 @@ handles, labels = ax.get_legend_handles_labels()
 
 # ackley-5D
 RES_num = {}
-RES_num["CBO"] = np.load(f"{CBO_DIR}OL-Regret-Figure_ACKLEY_5D-noise_c-InterP-B0.10-FB4.00-RI1--none-ci-R15-P2-T200_I1_L4-TI5-USexact.npy")
-RES_num["CMES-IBO"] = np.load(f"{BASELINE_DIR}cmes-ibo/OL-Regret-Figure_ACKLEY_5D-noise_c-InterP-RI1--none-cmes-ibo-R15-P2-T200_I1_L4-TI5-USexact.npy")
-RES_num["cEI"] = np.load(f"{BASELINE_DIR}qei/OL-Regret-Figure_ACKLEY_5D-noise_c-InterP-RI1--none-qei-R15-P2-T200_I1_L4-TI5-USexact.npy")
-RES_num["SCBO"] = np.load(f"{SCBO_DIR}OL-Regret-Figure_ACKLEY_5D-InterP-RI1--none-scbo-R15-P2-T200_I1_L4-TI5-USexact.npy")
-ax = plt.subplot(2,3,2)
+RES_num["CBO"] = np.load(f"{CBO_DIR}OL-Regret-Figure_ACKLEY_5D-noise_c-InterP-B0.10-FB4.00-RI1--none-ci-R{n_repeat}-P2-T{n_iter}_I1_L4-TI5-USexact.npy")
+RES_num["CMES-IBO"] = np.load(f"{BASELINE_DIR}cmes-ibo/OL-Regret-Figure_ACKLEY_5D-noise_c-InterP-RI1--none-cmes-ibo-R{n_repeat}-P2-T{n_iter}_I1_L4-TI5-USexact.npy")
+RES_num["cEI"] = np.load(f"{BASELINE_DIR}qei/OL-Regret-Figure_ACKLEY_5D-noise_c-InterP-RI1--none-qei-R{n_repeat}-P2-T{n_iter}_I1_L4-TI5-USexact.npy")
+RES_num["SCBO"] = np.load(f"{SCBO_DIR}OL-Regret-Figure_ACKLEY_5D-InterP-RI1--none-scbo-R{n_repeat}-P2-T{n_iter}_I1_L4-TI5-USexact.npy")
+ax = plt.subplot(1,3,2)
 visualize_regret(ax=ax, RES=RES_num, fontsize=fontsize, n_repeat=15, n_iter=100)
 ax.set_title("Ackley-5D-2C-14%", fontsize=fontsize)
 
 # Wave-Energy_Converter-36D
 RES_num = {}
-RES_num["CBO"] = np.load(f"{CBO_DIR}OL-Regret-Figure_WATER_CONVERTER_32D_NEG_3C-InterP-B20.00-FB20.00-RI1--none-ci-R15-P2-T200_I1_L4-TI5-USexact.npy")
-RES_num["CMES-IBO"] = np.load(f"{BASELINE_DIR}cmes-ibo/OL-Regret-Figure_WATER_CONVERTER_32D_NEG_3C-InterP-RI1--none-cmes-ibo-R15-P2-T200_I1_L4-TI5-USexact.npy")
-RES_num["cEI"] = np.load(f"{BASELINE_DIR}qei/OL-Regret-Figure_WATER_CONVERTER_32D_NEG_3C-InterP-RI1--none-qei-R15-P2-T200_I1_L4-TI5-USexact.npy")
-RES_num["SCBO"] = np.load(f"{SCBO_DIR}OL-Regret-Figure_WATER_CONVERTER_32D_NEG_3C-InterP-RI1--none-scbo-R15-P2-T200_I1_L4-TI5-USexact.npy")
-ax = plt.subplot(2,3,3)
+RES_num["CBO"] = np.load(f"{CBO_DIR}OL-Regret-Figure_WATER_CONVERTER_32D_NEG_3C-InterP-B20.00-FB20.00-RI1--none-ci-R{n_repeat}-P2-T{n_iter}_I1_L4-TI5-USexact.npy")
+RES_num["CMES-IBO"] = np.load(f"{BASELINE_DIR}cmes-ibo/OL-Regret-Figure_WATER_CONVERTER_32D_NEG_3C-InterP-RI1--none-cmes-ibo-R{n_repeat}-P2-T{n_iter}_I1_L4-TI5-USexact.npy")
+RES_num["cEI"] = np.load(f"{BASELINE_DIR}qei/OL-Regret-Figure_WATER_CONVERTER_32D_NEG_3C-InterP-RI1--none-qei-R{n_repeat}-P2-T{n_iter}_I1_L4-TI5-USexact.npy")
+RES_num["SCBO"] = np.load(f"{SCBO_DIR}OL-Regret-Figure_WATER_CONVERTER_32D_NEG_3C-InterP-RI1--none-scbo-R{n_repeat}-P2-T{n_iter}_I1_L4-TI5-USexact.npy")
+ax = plt.subplot(1,3,3)
 visualize_regret(ax=ax, RES=RES_num, fontsize=fontsize, n_repeat=15, n_iter=200)
 ax.set_title("Converter-36D-3C-27%", fontsize=fontsize)
-
-# vessel 
-RES_num = {}
-RES_num["CBO"] = np.load(f"{CBO_DIR}OL-Regret-Figure_VESSEL_4D_3C-InterP-B10.00-FB10.00-RI1--none-ci-R16-P2-T200_I1_L4-TI5-USexact.npy")
-RES_num["CMES-IBO"] = np.load(f"{BASELINE_DIR}cmes-ibo/OL-Regret-Figure_VESSEL_4D_3C-InterP-RI1--none-cmes-ibo-R16-P2-T200_I1_L4-TI5-USexact.npy")
-RES_num["cEI"] = np.load(f"{BASELINE_DIR}qei/OL-Regret-Figure_VESSEL_4D_3C-InterP-RI1--none-qei-R16-P2-T200_I1_L4-TI5-USexact.npy")
-RES_num["SCBO"] = np.load(f"{SCBO_DIR}OL-Regret-Figure_VESSEL_4D_3C-InterP-RI1--none-scbo-R16-P2-T200_I1_L4-TI5-USexact.npy")
-ax = plt.subplot(2,3,4)
-visualize_regret(ax=ax, RES=RES_num, fontsize=fontsize, n_repeat=15, n_iter=200)
-ax.set_title("Vessel-4D-3C-78%", fontsize=fontsize)
-
-
-# car cabin
-RES_num = {}
-RES_num["CBO"] = np.load(f"{CBO_DIR}OL-Regret-Figure_CAR_CAB_7D_8C-InterP-B2.00-FB2.00-RI1--none-ci-R15-P2-T200_I1_L4-TI5-USexact.npy")
-RES_num["CMES-IBO"] = np.load(f"{BASELINE_DIR}cmes-ibo/OL-Regret-Figure_CAR_CAB_7D_8C-InterP-RI1--none-cmes-ibo-R15-P2-T200_I1_L4-TI5-USexact.npy")
-RES_num["cEI"] = np.load(f"{BASELINE_DIR}qei/OL-Regret-Figure_CAR_CAB_7D_8C-InterP-RI1--none-qei-R15-P2-T200_I1_L4-TI5-USexact.npy")
-RES_num["SCBO"] = np.load(f"{SCBO_DIR}OL-Regret-Figure_CAR_CAB_7D_8C-InterP-RI1--none-scbo-R15-P2-T200_I1_L4-TI5-USexact.npy")
-ax = plt.subplot(2,3,5)
-visualize_regret(ax=ax, RES=RES_num, fontsize=fontsize, n_repeat=15, n_iter=200)
-ax.set_title("Car_Cabin-7D-8C-13%", fontsize=fontsize)
-
-# spring
-RES_num = {}
-RES_num["CBO"] = np.load(f"{CBO_DIR}OL-Regret-Figure_SPRING_3D_6C-InterP-B2.00-FB2.00-RI1--none-ci-R15-P2-T200_I1_L4-TI5-USexact.npy")
-RES_num["CMES-IBO"] = np.load(f"{BASELINE_DIR}cmes-ibo/OL-Regret-Figure_SPRING_3D_6C-InterP-RI1--none-cmes-ibo-R15-P2-T200_I1_L4-TI5-USexact.npy")
-RES_num["cEI"] = np.load(f"{BASELINE_DIR}qei/OL-Regret-Figure_SPRING_3D_6C-InterP-RI1--none-qei-R15-P2-T200_I1_L4-TI5-USexact.npy")
-RES_num["SCBO"] = np.load(f"{SCBO_DIR}OL-Regret-Figure_SPRING_3D_6C-InterP-RI1--none-scbo-R15-P2-T200_I1_L4-TI5-USexact.npy")
-ax = plt.subplot(2,3,6)
-visualize_regret(ax=ax, RES=RES_num, fontsize=fontsize, n_repeat=15, n_iter=200)
-ax.set_title("Spring-3D-6C-0.38%", fontsize=fontsize)
 
 
 # plot results
