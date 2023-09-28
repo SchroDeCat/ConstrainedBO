@@ -17,7 +17,6 @@ def visualize_regret(ax: plt.Axes, RES: dict, fontsize:int=14, n_repeat:int=15,
     sqrt_n = np.sqrt(n_repeat)
     init_regret = RES["CBO"][:,0].mean(axis=0)
     for method in RES_num.keys():
-        # CI = 1
         CI = 1.96
         coef = CI /sqrt_n
         final_regret = RES[method][:,-1]
@@ -101,8 +100,6 @@ ax.set_title("Spring-3D-6C-0.38%", fontsize=fontsize)
 
 
 # plot results
-# plt.tight_layout()
 fig.legend(handles, labels, loc='upper center', ncol=len(labels))
 plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.3, hspace=.3)
 plt.savefig("simple_regret_iclr.pdf")
-# plt.show()
