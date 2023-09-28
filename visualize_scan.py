@@ -11,7 +11,8 @@ BASELINE_DIR = "./res/"
 
 fig, axes = plt.subplots(2, 5,figsize=[30, 10], gridspec_kw={'height_ratios': [1, 1]})
 fontsize = 14
-n_repeat = 10
+n_repeat = 15
+n_iter = 2500
 
 def visualize_1d(c_portion:float, if_norm:bool=False):
         cbo_factory = Constrained_Data_Factory(num_pts=20000 if c_portion is None else 1000)
@@ -58,14 +59,14 @@ def visualize_regret(ax: plt.Axes, RES: dict, fontsize:int=14, n_repeat:int=15,
 # ras-1d-1c
 for idx, c_portion in enumerate(np.linspace(.1, .9, 5)):
     RES_num = {}
-    RES_num["CBO"] = np.load(f"{CBO_DIR}OL-Regret-Figure_RASTRIGIN_1D-CP{c_portion:.2%}_noise-InterP-B2.00-FB2.00-RI1--none-ci-R15-P2-T2500_I1_L4-TI1-USexact.npy")
-    RES_num["CMES-IBO"] = np.load(f"{BASELINE_DIR}OL-Regret-Figure_RASTRIGIN_1D-CP{c_portion:.2%}_noise-InterP-RI1--none-cmes-ibo-R15-P2-T2500_I1_L4-TI1-USexact.npy")
+    RES_num["CBO"] = np.load(f"{CBO_DIR}OL-Regret-Figure_RASTRIGIN_1D-CP{c_portion:.2%}_noise-InterP-B2.00-FB2.00-RI1--none-ci-R{n_repeat}-P2-T{n_iter}_I1_L4-TI1-USexact.npy")
+    RES_num["CMES-IBO"] = np.load(f"{BASELINE_DIR}OL-Regret-Figure_RASTRIGIN_1D-CP{c_portion:.2%}_noise-InterP-RI1--none-cmes-ibo-R{n_repeat}-P2-T{n_iter}_I1_L4-TI1-USexact.npy")
     try:
-        RES_num["cEI"] = np.load(f"{BASELINE_DIR}OL-Regret-Figure_RASTRIGIN_1D-CP{c_portion:.2%}_noise-InterP-RI1--none-qei-R15-P2-T2500_I1_L4-TI1-USexact.npy")
+        RES_num["cEI"] = np.load(f"{BASELINE_DIR}OL-Regret-Figure_RASTRIGIN_1D-CP{c_portion:.2%}_noise-InterP-RI1--none-qei-R{n_repeat}-P2-T{n_iter}_I1_L4-TI1-USexact.npy")
     except:
         pass
     try:
-        RES_num["SCBO"] = np.load(f"{BASELINE_DIR}OL-Regret-Figure_RASTRIGIN_1D-CP{c_portion:.2%}_noise-InterP-RI1--none-scbo-R15-P2-T2500_I1_L4-TI1-USexact.npy")
+        RES_num["SCBO"] = np.load(f"{BASELINE_DIR}OL-Regret-Figure_RASTRIGIN_1D-CP{c_portion:.2%}_noise-InterP-RI1--none-scbo-R{n_repeat}-P2-T{n_iter}_I1_L4-TI1-USexact.npy")
     except:
         pass
     ax = plt.subplot(2, 5, idx+1)
@@ -76,7 +77,7 @@ for idx, c_portion in enumerate(np.linspace(.1, .9, 5)):
 
     ax = plt.subplot(2, 5, idx+6)
     
-    visualize_regret(ax=ax, RES=RES_num, fontsize=fontsize, n_repeat=15, n_iter=2500)
+    visualize_regret(ax=ax, RES=RES_num, fontsize=fontsize, n_repeat=n_repeat, n_iter=n_iter)
     ax.set_title(f"Rastrigin-1D-1C-{c_portion:.2%} Simple Regret")
     if idx == 0:
         handles_2, labels_2 = ax.get_legend_handles_labels()
