@@ -106,7 +106,6 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
 if __name__ == "__main__":
     n_repeat = 15
     n_iter = 2500
-    train_times = 10
 
     for c_portion in tqdm.auto.tqdm(np.linspace(.1, .9, 5)):
         for method in METHODs:
