@@ -11,6 +11,7 @@ EXPS = ['rastrigin_1d', 'ackley_5d', 'ackley_10d','rosenbrock_5d', 'rosenbrock_4
         'water_converter_32d', 'water_converter_32d_neg', 'water_converter_32d_neg_3c', 'gpu_performance_16d', 
         'vessel_4d_3c', 'car_cab_7d_8c', 'spring_3d_6c']
 METHODs = ['cbo',  'qei', 'scbo', 'ts','random', 'cmes-ibo', ]
+PATH = './res'
 
 
 def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_times:int=5, n_iter:int=20, n_init:int=10, 
@@ -92,7 +93,7 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
                                 spectrum_norm=False, retrain_interval=1, acq=method, 
                                 verbose=True, lr=1e-4, name=name, 
                                 return_result=True, retrain_nn=True,
-                                plot_result=True, save_result=True, save_path=f'./res/baseline/test/{method}', 
+                                plot_result=True, save_result=True, save_path=f'{PATH}', 
                                 fix_seed=True,  pretrained=False, ae_loc=None, 
                                 exact_gp=exact_gp, constrain_noise=constrain_noise,
                                 interpolate=interpolate,)
@@ -103,7 +104,7 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
                     n_init=n_init, n_repeat=n_repeat, train_times=train_times, regularize=False, low_dim=low_dim,
                     spectrum_norm=False, retrain_interval=1, n_iter=n_iter, filter_interval=1, acq="ci", 
                     ci_intersection=False, verbose=True, lr=1e-4, name=name, return_result=True, retrain_nn=True,
-                    plot_result=True, save_result=True, save_path='./res/cbo/test', fix_seed=True,  pretrained=False, ae_loc=None, 
+                    plot_result=True, save_result=True, save_path=f'{PATH}', fix_seed=True,  pretrained=False, ae_loc=None, 
                     _minimum_pick = 10, _delta = 0.01, beta=beta, filter_beta=filter_beta, exact_gp=exact_gp, constrain_noise=constrain_noise, 
                     local_model=False,  interpolate=interpolate,)
 
@@ -120,7 +121,7 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
             n_init=n_init, n_repeat=n_repeat, train_times=train_times, low_dim=low_dim,
             retrain_interval=1, n_iter=n_iter,
             verbose=True, lr=lr, name=name, return_result=True, 
-            plot_result=True, save_result=True, save_path='./res/scbo/test', fix_seed=True,
+            plot_result=True, save_result=True, save_path=f'{PATH}', fix_seed=True,
             exact_gp=exact_gp, constrain_noise=constrain_noise, interpolate=interpolate)
 
     else:
@@ -131,8 +132,8 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
 
 
 if __name__ == "__main__":
-    n_repeat = 15
-    n_iter = 200
+    n_repeat = 1
+    n_iter = 2
 
     for method in ['cbo', 'cmes-ibo', 'qei', 'scbo']:
         experiment(exp='rastrigin_1d',                  n_init=5,   n_iter=n_iter,  n_repeat=n_repeat, method=method, train_times=10, )

@@ -687,10 +687,10 @@ class Constrained_Data_Factory(Data_Factory):
         plt.xlabel('X')
         plt.ylabel("Y")
         if hasattr(self, 'c_portion'):
-            _fig_dir = f"./res/illustration/{self._venue}_{self._name}_P{self.c_portion:.0%}"
+            _fig_dir = f"./res/{self._venue}_{self._name}_P{self.c_portion:.0%}"
 
         else:
-            _fig_dir = f"./res/illustration/{self._venue}_{self._name}"
+            _fig_dir = f"./res/{self._venue}_{self._name}"
         plt.savefig(_fig_dir)
         plt.close()
 
