@@ -103,6 +103,6 @@ ax.set_title("Spring-3D-6C-0.38%", fontsize=fontsize)
 # plot results
 # plt.tight_layout()
 fig.legend(handles, labels, loc='upper center', ncol=len(labels))
-plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.3, hspace=.4)
+plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=0.3, hspace=.3)
 plt.savefig("simple_regret_iclr.pdf")
 # plt.show()

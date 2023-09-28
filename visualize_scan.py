@@ -90,6 +90,7 @@ for idx, c_portion in enumerate(np.linspace(.1, .9, 5)):
     # plt.legend()
     if idx == 0:
         handles_2, labels_2 = ax.get_legend_handles_labels()
+    plt.ylim(-1, 15)
 # plt.subplots_adjust(hspace=0, wspace=0)
 
 
