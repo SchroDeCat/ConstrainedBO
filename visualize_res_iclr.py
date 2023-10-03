@@ -76,7 +76,7 @@ RES_num["SCBO"] = np.load(
 )
 ax = plt.subplot(1, 3, 2)
 visualize_regret(
-    ax=ax, RES=RES_num, fontsize=fontsize, n_repeat=n_repeat, n_iter=n_iter
+    ax=ax, RES=RES_num, fontsize=fontsize, n_repeat=n_repeat, n_iter=100,
 )
 ax.set_title("Ackley-5D-2C-14%", fontsize=fontsize)
 
