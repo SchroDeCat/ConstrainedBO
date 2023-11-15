@@ -10,6 +10,7 @@ import warnings
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib as mpl
+import time
 
 from ..SCBO import SCBO
 from ..models import DKL, AE, beta_CI
@@ -390,6 +391,8 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
     default_beta = beta <= 0
     default_fbeta = filter_beta < 1e-10
 
+    startTime = time.time()
+
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         for rep in tqdm.tqdm(range(n_repeat), desc=f"Experiment Rep"):
@@ -656,9 +659,11 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
     
     beta = 0 if default_beta else beta # for record
 
+    executionTime = (time.time() - startTime)
+
     ### Export results
     _file_prefix = f"Figure_{name}{'-InterP' if interpolate else ''}{'-Exact' if exact_gp else ''}-B{beta:.2f}-FB{filter_beta:.2f}-RI{retrain_interval}"
-    _file_postfix = f"-{acq}-R{n_repeat}-P{1}-T{n_iter}_I{filter_interval}_L{int(-np.log10(lr))}-TI{train_times}{'-sec' if ci_intersection else ''}"
+    _file_postfix = f"-{acq}-R{n_repeat}-P{1}-T{n_iter}_I{filter_interval}_L{int(-np.log10(lr))}-TI{train_times}{'-sec' if ci_intersection else ''}-{executionTime:.2e}s"
     if plot_result:
         # regret
         fig = plt.figure()
@@ -765,7 +770,7 @@ def baseline_cbo_m(x_tensor, y_tensor, c_tensor_list,
     else:
         ae = None
 
-
+    startTime = time.time()
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         for rep in tqdm.tqdm(range(n_repeat), desc=f"Experiment Rep"):
@@ -813,10 +818,10 @@ def baseline_cbo_m(x_tensor, y_tensor, c_tensor_list,
 
     reg_output_record = reg_record.mean(axis=0)
     
-
+    executionTime = (time.time() - startTime)
     ### Export results
     _file_prefix = f"Figure_{name}{'-InterP' if interpolate else ''}{'-Exact' if exact_gp else ''}-RI{retrain_interval}"
-    _file_postfix = f"-{acq}-R{n_repeat}-P{1}-T{n_iter}_I{filter_interval}_L{int(-np.log10(lr))}-TI{train_times}"
+    _file_postfix = f"-{acq}-R{n_repeat}-P{1}-T{n_iter}_I{filter_interval}_L{int(-np.log10(lr))}-TI{train_times}-{executionTime:.2e}s"
     if plot_result:
         # regret
         fig = plt.figure()
@@ -853,7 +858,7 @@ def baseline_scbo(x_tensor, y_func, c_func_list,
     name = name if low_dim else name+'-hd'
     acq = 'scbo'
 
-
+    startTime = time.time()
     reg_record = np.zeros([n_repeat, n_iter])
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -884,10 +889,10 @@ def baseline_scbo(x_tensor, y_func, c_func_list,
 
     reg_output_record = reg_record.mean(axis=0)
     
-
+    executionTime = (time.time() - startTime)
     ### Export results
     _file_prefix = f"Figure_{name}{'-InterP' if interpolate else ''}{'-Exact' if exact_gp else ''}-RI{retrain_interval}"
-    _file_postfix = f"-{acq}-R{n_repeat}-P{1}-T{n_iter}_I{filter_interval}_L{int(-np.log10(lr))}-TI{train_times}"
+    _file_postfix = f"-{acq}-R{n_repeat}-P{1}-T{n_iter}_I{filter_interval}_L{int(-np.log10(lr))}-TI{train_times}-{executionTime:.2e}s"
     if plot_result:
         # regret
         fig = plt.figure()
