@@ -511,7 +511,7 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
 
 
                 roi_filter = f_roi_filter.clone()           # single general roi
-                for c_roi_filter in c_roi_filter_list:  # general ROI.
+                for c_roi_filter in c_roi_filter_list:      # general ROI.
                     roi_filter = roi_filter.logical_and(c_roi_filter)
                 
                 if sum(roi_filter[observed==1]) <= _minimum_pick:
