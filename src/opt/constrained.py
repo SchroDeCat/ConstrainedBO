@@ -20,6 +20,7 @@ from math import ceil, floor
 from scipy.stats import norm
  
 DEVICE = torch.device('cpu')
+RECORD_TIME = True
 
 def cbo(x_tensor, y_tensor, c_tensor, constraint_threshold, constraint_confidence=0.8, optimization_ratio=0.8, n_init=10, n_repeat=2, train_times=10, beta=2, regularize=False, low_dim=True, 
             spectrum_norm=False, retrain_interval=1, n_iter=40, filter_interval=1, acq="ci", ci_intersection=True, verbose=True, lr=1e-2, name="test", return_result=True, retrain_nn=True,
@@ -659,11 +660,14 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
     
     beta = 0 if default_beta else beta # for record
 
+
     executionTime = (time.time() - startTime)
 
     ### Export results
     _file_prefix = f"Figure_{name}{'-InterP' if interpolate else ''}{'-Exact' if exact_gp else ''}-B{beta:.2f}-FB{filter_beta:.2f}-RI{retrain_interval}"
-    _file_postfix = f"-{acq}-R{n_repeat}-P{1}-T{n_iter}_I{filter_interval}_L{int(-np.log10(lr))}-TI{train_times}{'-sec' if ci_intersection else ''}-{executionTime:.2e}s"
+    _file_postfix = f"-{acq}-R{n_repeat}-P{1}-T{n_iter}_I{filter_interval}_L{int(-np.log10(lr))}-TI{train_times}{'-sec' if ci_intersection else ''}"
+    if RECORD_TIME:
+        _file_postfix = f"{_file_postfix}-{executionTime:.2e}s"
     if plot_result:
         # regret
         fig = plt.figure()
@@ -821,7 +825,9 @@ def baseline_cbo_m(x_tensor, y_tensor, c_tensor_list,
     executionTime = (time.time() - startTime)
     ### Export results
     _file_prefix = f"Figure_{name}{'-InterP' if interpolate else ''}{'-Exact' if exact_gp else ''}-RI{retrain_interval}"
-    _file_postfix = f"-{acq}-R{n_repeat}-P{1}-T{n_iter}_I{filter_interval}_L{int(-np.log10(lr))}-TI{train_times}-{executionTime:.2e}s"
+    _file_postfix = f"-{acq}-R{n_repeat}-P{1}-T{n_iter}_I{filter_interval}_L{int(-np.log10(lr))}-TI{train_times}"
+    if RECORD_TIME:
+        _file_postfix = f"{_file_postfix}-{executionTime:.2e}s"
     if plot_result:
         # regret
         fig = plt.figure()
@@ -892,7 +898,9 @@ def baseline_scbo(x_tensor, y_func, c_func_list,
     executionTime = (time.time() - startTime)
     ### Export results
     _file_prefix = f"Figure_{name}{'-InterP' if interpolate else ''}{'-Exact' if exact_gp else ''}-RI{retrain_interval}"
-    _file_postfix = f"-{acq}-R{n_repeat}-P{1}-T{n_iter}_I{filter_interval}_L{int(-np.log10(lr))}-TI{train_times}-{executionTime:.2e}s"
+    _file_postfix = f"-{acq}-R{n_repeat}-P{1}-T{n_iter}_I{filter_interval}_L{int(-np.log10(lr))}-TI{train_times}"
+    if RECORD_TIME:
+        _file_postfix = f"{_file_postfix}-{executionTime:.2e}s"
     if plot_result:
         # regret
         fig = plt.figure()

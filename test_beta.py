@@ -271,19 +271,19 @@ if __name__ == "__main__":
             train_times=10,
             beta = beta,
         )
-        # experiment(
-        #     exp="ackley_5d", 
-        #     n_init=20, 
-        #     n_iter=n_iter, 
-        #     n_repeat=n_repeat, 
-        #     method=method,
-        #     beta = beta,
-        # )
-        # experiment(
-        #     exp="water_converter_32d_neg_3c",
-        #     n_init=10,
-        #     n_iter=n_iter,
-        #     n_repeat=n_repeat,
-        #     method=method,
-        #     beta = beta,
-        # )
+        experiment(
+            exp="ackley_5d", 
+            n_init=20, 
+            n_iter=n_iter, 
+            n_repeat=n_repeat, 
+            method=method,
+            beta = beta,
+        )
+        experiment(
+            exp="water_converter_32d_neg_3c",
+            n_init=10,
+            n_iter=n_iter,
+            n_repeat=n_repeat,
+            method=method,
+            beta = beta,
+        )
