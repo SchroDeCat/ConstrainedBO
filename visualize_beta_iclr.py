@@ -40,7 +40,7 @@ def visualize_regret(
 RES_num = {}
 for beta in BETA:
     for _file in listdir(f"{CBO_DIR}"):
-        _pre = f"OL-Regret-Figure_RASTRIGIN_1D-InterP-B{beta:.2f}-FB1.00-RI1--none-ci-R{n_repeat}-P2-T{n_iter}_I1_L4-TI10-USexact"
+        _pre = f"OL-Regret-Figure_RASTRIGIN_1D-InterP-B{beta:.2f}-FB{beta:.2f}-RI1--none-ci-R{n_repeat}-P2-T{n_iter}_I1_L4-TI10-USexact"
         _ext = 'npy'
         if _file.startswith(_pre) and _file.endswith(_ext):
             RES_num[f"Beta {beta}"] = np.load(
@@ -59,7 +59,7 @@ handles, labels = ax.get_legend_handles_labels()
 RES_num = {}
 for beta in BETA:
     for _file in listdir(f"{CBO_DIR}"):
-        _pre = f"OL-Regret-Figure_ACKLEY_5D-noise_c-InterP-B{beta:.2f}-FB4.00-RI1--none-ci-R{n_repeat}-P2-T{n_iter}_I1_L4-TI5-USexact"
+        _pre = f"OL-Regret-Figure_ACKLEY_5D-noise_c-InterP-B{beta:.2f}-FB{beta:.2f}-RI1--none-ci-R{n_repeat}-P2-T{n_iter}_I1_L4-TI5-USexact"
         _ext = 'npy'
         if _file.startswith(_pre) and _file.endswith(_ext):
             RES_num[f"Beta {beta}"] = np.load(
@@ -76,7 +76,7 @@ ax.set_title("Ackley-5D-2C-14%", fontsize=fontsize)
 RES_num = {}
 for beta in BETA:
     for _file in listdir(f"{CBO_DIR}"):
-        _pre = f"OL-Regret-Figure_WATER_CONVERTER_32D_NEG_3C-InterP-B{beta:.2f}-FB20.00-RI1--none-ci-R{n_repeat}-P2-T{n_iter}_I1_L4-TI5-USexact.npy"
+        _pre = f"OL-Regret-Figure_WATER_CONVERTER_32D_NEG_3C-InterP-B{beta:.2f}-FB{beta:.2f}-RI1--none-ci-R{n_repeat}-P2-T{n_iter}_I1_L4-TI5-USexact.npy"
         _ext = 'npy'
         if _file.startswith(_pre) and _file.endswith(_ext):
             RES_num[f"Beta {beta}"] = np.load(
@@ -95,4 +95,4 @@ fig.legend(handles, labels, loc="upper center", ncol=len(labels))
 plt.subplots_adjust(
     left=None, bottom=None, right=None, top=None, wspace=0.3, hspace=0.3
 )
-plt.savefig("simple_regret_beta_iclr.pdf")
+plt.savefig("simple_regret_fbeta_iclr.pdf")

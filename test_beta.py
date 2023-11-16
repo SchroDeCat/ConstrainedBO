@@ -86,8 +86,9 @@ def experiment(
         y_tensor = cbo_factory.y_tensor
         constrain_noise = False
 
-        filter_beta = 1
+        # filter_beta = 1
         # beta = 2.90
+        filter_beta = beta
         cbo_factory.visualize_1d()
 
     elif exp == "ackley_5d":
@@ -108,7 +109,8 @@ def experiment(
         cbo_factory.visualize_1d(if_norm=True)
 
         # beta = 0.1  # actually is 10 here?
-        filter_beta = 4
+        # filter_beta = 4 
+        filter_beta = beta
         constrain_noise = True
 
     elif exp == "water_converter_32d_neg_3c":
@@ -130,7 +132,8 @@ def experiment(
         y_tensor = cbo_factory.y_tensor
         cbo_factory.visualize_1d(if_norm=True)
         constrain_noise = False
-        filter_beta = 20
+        filter_beta = beta
+        # filter_beta = 20
         # beta = 20
 
     else:
@@ -261,7 +264,7 @@ if __name__ == "__main__":
 
     # for method in ["cbo", "cmes-ibo", "qei", "scbo"]:
     method = 'cbo'
-    for beta in [0, 0.1, 2.9, 10]:
+    for beta in [0, .1, 2, 4, 8]:
         experiment(
             exp="rastrigin_1d",
             n_init=5,
