@@ -4,7 +4,9 @@ from matplotlib import pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 
 CBO_DIR = "./res/beta"
-BETA = [0, 0.1, 2.9, 10]
+# BETA = [0, 0.1, 2.9, 10]
+# BETA = [0, .1, 2, 4, 8]
+BETA = [0, .1, 2, 4, 8]
 
 fig = plt.figure(figsize=[18, 10])
 fontsize = 14
@@ -40,9 +42,9 @@ def visualize_regret(
 RES_num = {}
 for beta in BETA:
     for _file in listdir(f"{CBO_DIR}"):
-        _pre = f"OL-Regret-Figure_RASTRIGIN_1D-InterP-B{beta:.2f}-FB{beta:.2f}-RI1--none-ci-R{n_repeat}-P2-T{n_iter}_I1_L4-TI10-USexact"
+        _pre = f"OL-Regret-Figure_RASTRIGIN_1D-InterP-B{beta:.2f}"
         _ext = 'npy'
-        if _file.startswith(_pre) and _file.endswith(_ext):
+        if _file.startswith(_pre) and _file.endswith(_ext) and ('B0.00-FB1.00' not in _file):
             RES_num[f"Beta {beta}"] = np.load(
                 f"{CBO_DIR}/{_file}"
             )
@@ -59,9 +61,9 @@ handles, labels = ax.get_legend_handles_labels()
 RES_num = {}
 for beta in BETA:
     for _file in listdir(f"{CBO_DIR}"):
-        _pre = f"OL-Regret-Figure_ACKLEY_5D-noise_c-InterP-B{beta:.2f}-FB{beta:.2f}-RI1--none-ci-R{n_repeat}-P2-T{n_iter}_I1_L4-TI5-USexact"
+        _pre = f"OL-Regret-Figure_ACKLEY_5D-noise_c-InterP-B{beta:.2f}"
         _ext = 'npy'
-        if _file.startswith(_pre) and _file.endswith(_ext):
+        if _file.startswith(_pre) and _file.endswith(_ext) and ('B0.00-FB4.00' not in _file):
             RES_num[f"Beta {beta}"] = np.load(
                 f"{CBO_DIR}/{_file}"
             )
@@ -76,9 +78,9 @@ ax.set_title("Ackley-5D-2C-14%", fontsize=fontsize)
 RES_num = {}
 for beta in BETA:
     for _file in listdir(f"{CBO_DIR}"):
-        _pre = f"OL-Regret-Figure_WATER_CONVERTER_32D_NEG_3C-InterP-B{beta:.2f}-FB{beta:.2f}-RI1--none-ci-R{n_repeat}-P2-T{n_iter}_I1_L4-TI5-USexact.npy"
+        _pre = f"OL-Regret-Figure_WATER_CONVERTER_32D_NEG_3C-InterP-B{beta:.2f}"
         _ext = 'npy'
-        if _file.startswith(_pre) and _file.endswith(_ext):
+        if _file.startswith(_pre) and _file.endswith(_ext) and ('B0.00-FB20.00' not in _file):
             RES_num[f"Beta {beta}"] = np.load(
                 f"{CBO_DIR}/{_file}"
             )
