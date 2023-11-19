@@ -40,7 +40,7 @@ def visualize_1d(c_portion:float, if_norm:bool=False):
 def visualize_regret(ax: plt.Axes, RES: dict, fontsize:int=14, n_repeat:int=15, 
                     n_iter:int=100) -> None:
     sqrt_n = np.sqrt(n_repeat)
-    init_regret = RES["CBO"][:,0].mean(axis=0)
+    init_regret = RES["COBALT"][:,0].mean(axis=0)
     for method in RES_num.keys():
         # CI = 1
         CI = 1.96
@@ -63,7 +63,7 @@ def visualize_regret(ax: plt.Axes, RES: dict, fontsize:int=14, n_repeat:int=15,
 # ras-1d-1c
 for idx, c_portion in enumerate(np.linspace(.1, .9, 5)):
     RES_num = {}
-    RES_num["CBO"] = np.load(f"{CBO_DIR}OL-Regret-Figure_RASTRIGIN_1D-CP{c_portion:.2%}_noise-InterP-B2.00-FB2.00-RI1--none-ci-R15-P2-T2500_I1_L4-TI1-USexact.npy")
+    RES_num["COBALT"] = np.load(f"{CBO_DIR}OL-Regret-Figure_RASTRIGIN_1D-CP{c_portion:.2%}_noise-InterP-B2.00-FB2.00-RI1--none-ci-R15-P2-T2500_I1_L4-TI1-USexact.npy")
     RES_num["CMES-IBO"] = np.load(f"{BASELINE_DIR}OL-Regret-Figure_RASTRIGIN_1D-CP{c_portion:.2%}_noise-InterP-RI1--none-cmes-ibo-R15-P2-T2500_I1_L4-TI1-USexact.npy")
     try:
         RES_num["cEI"] = np.load(f"{BASELINE_DIR}OL-Regret-Figure_RASTRIGIN_1D-CP{c_portion:.2%}_noise-InterP-RI1--none-qei-R15-P2-T2500_I1_L4-TI1-USexact.npy")
