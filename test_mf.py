@@ -287,7 +287,7 @@ def experiment(
 if __name__ == "__main__":
     # n_repeat = 15
     # n_iter = 200
-    n_repeat = 2
+    n_repeat = 10
     n_iter = 100
 
     for c_portion in tqdm.auto.tqdm(np.linspace(0.1, .9, 5)):
