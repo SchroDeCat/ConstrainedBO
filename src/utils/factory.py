@@ -456,6 +456,63 @@ class Constrained_Data_Factory(Data_Factory):
         else:
             return self.x_tensor, self.objective, self.c_func_list
 
+    def nano_mf_5d_1c(self, scbo_format=False, **kwargs) -> List[tensor]:
+        '''
+        All subreward < 92000
+        '''
+        self._name = "nano_mf_5d_1c"
+        self.dim = 5
+        c_num = 1
+        _factor = 100
+        _shift = 10
+        scan_c = kwargs.get('c_scan', False) # if moving the threshold
+
+
+        _data_path = f"{os.path.dirname(os.path.abspath(__file__))}/../../data/mfRVs.pt"
+        _label_path = f"{os.path.dirname(os.path.abspath(__file__))}/../../data/mfFOMs_y.pt"
+        data = torch.load(_data_path)[:self._num_pts].to(device=device, dtype=dtype)
+        self.x_tensor_range = data
+        self.lb, self.ub = self.x_tensor_range.min(dim=0).values, self.x_tensor_range.max(dim=0).values
+        self.x_tensor = (self.x_tensor_range - self.lb) / (self.ub - self.lb)
+        label = torch.load(_label_path)[:self._num_pts].to(device=device, dtype=dtype) / _factor - _shift
+
+        combined_data = torch.hstack([data, label])
+
+        self.objective = lambda x: Constrained_Data_Factory.nearest_approx(combined_data, unnormalize(x, (self.lb, self.ub)), 5, reward_idx=-1)
+        self.c_func1 = lambda x: Constrained_Data_Factory.nearest_approx(combined_data, unnormalize(x, (self.lb, self.ub)), 5, reward_idx=-2)
+
+        self.x_tensor_range = unnormalize(self.x_tensor, (self.lb, self.ub))
+        self.y_tensor = label[:,-1].reshape([-1,1])
+        self.c_tensor1 = label[:,-2].reshape([-1,1])
+        self.c_tensor_list = [self.c_tensor1]
+
+
+        # feasible region identification
+        self.constraint_confidence_list = [0.5]
+        if scan_c:
+            self.c_portion = kwargs.get('c_portion', .1) # portion of feasible region
+            self.constraint_threshold_list = [np.quantile(self.c_tensor1, 1-self.c_portion)] 
+        else:
+            self.constraint_threshold_list = [0]
+            self.c_portion = (sum(self.c_tensor1 > 0) / self.c_tensor1.size(0)).detach().item()
+
+        self.feasible_filter = feasible_filter_gen(self.c_tensor_list, self.constraint_threshold_list)
+        self.c_func1_scbo = lambda x: -self.c_func1(x) + self.constraint_threshold_list[0]
+        self.c_func_list = [self.c_func1_scbo]
+
+        self.c_portion = (sum(self.feasible_filter) / self.feasible_filter.size(0)).detach().item()
+        self.feasible_filter = feasible_filter_gen(self.c_tensor_list, self.constraint_threshold_list)
+        # self.feasible_filter = self.feasible_filter.unsqueeze(0)
+        assert torch.any(self.feasible_filter)
+        print(f"Name {self._name} feasible pts {self.feasible_filter.sum()} over {self.feasible_filter.size(0)}")
+
+        __feasible_y = torch.where(self.feasible_filter, self.y_tensor.squeeze(), float('-inf'))
+        self.maximum = __feasible_y.max()
+        self.max_arg = __feasible_y.argmax()
+        if not scbo_format:
+            return self.x_tensor_range, self.y_tensor, self.c_tensor_list
+        else:
+            return self.x_tensor, self.objective, self.c_func_list
 
     def RE2_4D_3C(self, scbo_format:bool=False,):
         """An easy-to-use real-world multi-objective optimization problem suite - ScienceDirect
