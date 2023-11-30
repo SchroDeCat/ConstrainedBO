@@ -35,6 +35,7 @@ METHODs = [
 ]
 PATH = "./res/mf"
 NOISE = False
+# NOISE = True
 
 
 def experiment(
@@ -141,7 +142,7 @@ def experiment(
         filter_beta = 20
         beta = 20
     elif exp == "nano_mf_5d_1c":
-        cbo_factory = Constrained_Data_Factory(num_pts=4000)
+        cbo_factory = Constrained_Data_Factory(num_pts=5000)
         scbo = "scbo" in method
         if scbo:
             raise NotImplementedError('SCBO not implemented for Nano')
@@ -290,7 +291,10 @@ if __name__ == "__main__":
     n_repeat = 10
     n_iter = 100
 
-    for c_portion in tqdm.auto.tqdm(np.linspace(0.1, .9, 5)):
+    # for c_portion in tqdm.auto.tqdm(np.linspace(0.1, .9, 5)):
+    # for c_portion in [1]:
+    # for c_portion in [.3, .5, .7]:
+    for c_portion in [5e-2, 1e-2]:
         for method in METHODs:
             # if method in ["cbo", "cmes-ibo", "qei", "scbo"]:
             if method in ["cbo"]:

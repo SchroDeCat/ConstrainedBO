@@ -16,7 +16,7 @@ n_iter = 100
 
 
 def visualize_1d(c_portion: float, if_norm: bool = True):
-    cbo_factory = Constrained_Data_Factory(num_pts=4000)
+    cbo_factory = Constrained_Data_Factory(num_pts=5000)
     if not c_portion is None:  # scanning the portion
         x_tensor, y_tensor, c_tensor_list = cbo_factory.nano_mf_5d_1c(
             scbo_format=False, c_scan=True, c_portion=c_portion
@@ -83,7 +83,9 @@ def visualize_regret(
 
 
 # ras-1d-1c
-for idx, c_portion in enumerate(np.linspace(0.1, 0.9, 5)):
+# for idx, c_portion in enumerate(np.linspace(0.1, 0.9, 5)):
+# for idx, c_portion in enumerate([.1,.3,.5,.7,1]):
+for idx, c_portion in enumerate([5e-2, 1e-2]):
     RES_num = {}
     RES_num["CBO"] = np.load(
         f"{CBO_DIR}OL-Regret-Figure_NANO_MF_5D_1C-CP{c_portion:.2%}-InterP-B2.00-FB2.00-RI1--none-ci-R{n_repeat}-P2-T{n_iter}_I1_L4-TI1-USexact.npy"
