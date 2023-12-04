@@ -9,14 +9,13 @@ import tqdm
 import warnings
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib as mpl
 import time
 
-from types import Tuple, Any
+from typing import Tuple, Any
 from ..SCBO import SCBO
 from ..models import DKL, AE, beta_CI
 from ..utils import save_res, model_list_CI, intersecting_ROI_globe, feasible_filter_gen
-from .dkbo_ae_constrained import DK_BO_AE_C, DK_BO_AE_C_M
+from .dkbo_ae_constrained_decoupled import DK_BO_AE_C_M_DEC
 from math import ceil, floor
 from scipy.stats import norm
  
@@ -30,7 +29,11 @@ def init_rounds(data_size:int, n_init:int, train_times:int, low_dim:bool, spectr
     '''
     observed = np.zeros(data_size)
     observed[:n_init] = 1
+    c_observed_list = [np.zeros(data_size) for _ in range(c_num)]
     init_x = x_tensor[:n_init]
+    for c_idx in range(c_num):
+        c_observed_list[c_idx][:n_init] = 1
+    
     if not noisy_obs:
         init_y = y_tensor[:n_init]
         init_c_list = [c_tensor_list[c_idx][:n_init] for c_idx in range(c_num)]
@@ -51,10 +54,10 @@ def init_rounds(data_size:int, n_init:int, train_times:int, low_dim:bool, spectr
             _c_model_list[c_idx].train_model(verbose=False)
     f_lcb, f_ucb = _f_model.CI(x_tensor.to(DEVICE))
     c_lcb_list, c_ucb_list = model_list_CI(_c_model_list, x_tensor, DEVICE)
-    return observed, init_x, init_y, init_c_list, _f_model, _c_model_list, f_lcb, f_ucb, c_lcb_list, c_ucb_list
+    return observed, c_observed_list, init_x, init_y, init_c_list, _f_model, _c_model_list, f_lcb, f_ucb, c_lcb_list, c_ucb_list
 
-def finialize_rounds(util_array:np.ndarray, roi_filter:np.ndarray, _cbo_m:DK_BO_AE_C_M, x_tensor:torch.Tensor, y_tensor:torch.Tensor, c_tensor_list:list, c_num:int,
-                    observed:np.ndarray, train_times:int, low_dim:bool, spectrum_norm:bool, lr:float, exact_gp:bool, interpolate:bool, 
+def finialize_rounds(util_array:np.ndarray, roi_filter:np.ndarray, _cbo_m:DK_BO_AE_C_M_DEC, x_tensor:torch.Tensor, y_tensor:torch.Tensor, c_tensor_list:list, c_num:int,
+                    observed:np.ndarray, c_observed_list:list, train_times:int, low_dim:bool, spectrum_norm:bool, lr:float, exact_gp:bool, interpolate:bool, 
                     global_noise_constraint=None, regularize:bool=False, ae:Any=None, retrain_nn:bool=True)->None:
     '''
     Finialize DKL and generate f_ucb for partition
@@ -66,13 +69,15 @@ def finialize_rounds(util_array:np.ndarray, roi_filter:np.ndarray, _cbo_m:DK_BO_
     observed_diff = (observed - _cbo_m.observed).sum()
     observed[_cbo_m.observed == 1] = 1
     observed_num = observed.sum()
+    for c_idx in range(c_num):
+        c_observed_list[c_idx][_cbo_m.c_observed_list[c_idx] == 1] = 1
 
     # update model and therefore the confidence intervals for filtering
     _f_model = DKL(x_tensor[observed==1], y_tensor[observed==1].squeeze() if sum(observed) > 1 else y_tensor[observed==1],  
                 n_iter=train_times, low_dim=low_dim, pretrained_nn=ae, retrain_nn=retrain_nn, lr=lr, spectrum_norm=spectrum_norm,
                 exact_gp=exact_gp, noise_constraint=global_noise_constraint, interpolate=interpolate)
     
-    _c_model_list = [DKL(x_tensor[observed==1], c_tensor_list[c_idx][observed==1].squeeze() if sum(observed) > 1 else c_tensor_list[c_idx][observed==1], 
+    _c_model_list = [DKL(x_tensor[c_observed_list[c_idx]==1], c_tensor_list[c_idx][c_observed_list[c_idx]==1].squeeze() if sum(c_observed_list[c_idx]) > 1 else c_tensor_list[c_idx][c_observed_list[c_idx]==1], 
                             n_iter=train_times, low_dim=low_dim, lr=lr, spectrum_norm=spectrum_norm, 
                             exact_gp=exact_gp, noise_constraint=global_noise_constraint, pretrained_nn=ae, interpolate=interpolate) for c_idx in range(c_num)]
 
@@ -86,7 +91,7 @@ def finialize_rounds(util_array:np.ndarray, roi_filter:np.ndarray, _cbo_m:DK_BO_
             _c_model_list[c_idx].train_model(verbose=False)
     f_lcb, f_ucb = _f_model.CI(x_tensor.to(DEVICE))
     c_lcb_list, c_ucb_list = model_list_CI(_c_model_list, x_tensor, DEVICE)
-    return observed, _f_model, _c_model_list, f_lcb, f_ucb, c_lcb_list, c_ucb_list
+    return observed, c_observed_list, _f_model, _c_model_list, f_lcb, f_ucb, c_lcb_list, c_ucb_list
 
 def export_results(save_path:str, name:str, n_repeat:int, n_iter:int, acq:str, lr:float,  ci_intersection:bool, verbose:bool,
                     beta:float=0, interpolate:bool=False, exact_gp:bool=False, filter_beta:float=0,  retrain_interval:int=1,
@@ -146,7 +151,7 @@ def export_results(save_path:str, name:str, n_repeat:int, n_iter:int, acq:str, l
 
 
 
-def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, constraint_confidence_list, 
+def cbo_multi_decoupled(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, constraint_confidence_list, 
               n_init=10, n_repeat=2, train_times=10, beta=2, regularize=False, low_dim=True, 
             spectrum_norm=False, retrain_interval=1, n_iter=40, filter_interval=1, acq="ci", 
             ci_intersection=True, verbose=True, lr=1e-2, name="test", return_result=True, retrain_nn=True,
@@ -254,7 +259,7 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
             _init_values = init_rounds(data_size, n_init, train_times, low_dim, spectrum_norm, lr, exact_gp, interpolate, x_tensor, y_tensor, c_tensor_list, c_num, noisy_obs=noisy_obs,
                                         global_noise_constraint=global_noise_constraint, regularize=regularize, ae=ae)
             
-            observed, init_x, init_y, init_c_list, _f_model, _c_model_list, f_lcb, f_ucb, c_lcb_list, c_ucb_list = _init_values
+            observed, c_observed_list, init_x, init_y, init_c_list, _f_model, _c_model_list, f_lcb, f_ucb, c_lcb_list, c_ucb_list = _init_values
 
 
             ####### each test instance
@@ -353,26 +358,30 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
                 filter_ratio = roi_filter.sum()/data_size
                 observed_unfiltered = np.min([observed, roi_filter.numpy()], axis=0)      # observed and not filtered outs
                 init_x = x_tensor[observed_unfiltered==1]
-                init_y = y_tensor[observed_unfiltered==1]
-                init_c_list = [c_tensor[observed_unfiltered==1] for c_tensor in c_tensor_list]
+
+                c_observed_unfiltered_list = [None for _ in range(c_num)]
+                for c_idx in range(c_num):
+                    c_observed_unfiltered_list[c_idx] = np.min([c_observed_list[c_idx], roi_filter.numpy()], axis=0)
+                    init_c_x_list = [x_tensor[c_observed_unfiltered_list[c_idx]==1] for c_idx in range(c_num)]
 
                 if not noisy_obs:
                     init_y = y_tensor[observed_unfiltered==1]
-                    init_c_list = [c_tensor[observed_unfiltered==1] for c_tensor in c_tensor_list]
+                    for c_idx in range(c_num):
+                        init_c_list = [c_tensor[c_observed_unfiltered_list[c_idx]==1] for c_tensor in c_tensor_list]
                 else:
                     _obs_count = sum(observed_unfiltered==1)
                     init_y = torch.normal(mean=y_tensor[observed_unfiltered==1], std=torch.ones(1)/1e1)
-                    init_c_list = [torch.normal(mean=c_tensor[observed_unfiltered==1], std=torch.ones(1)/1e3) for c_tensor in c_tensor_list]
+                    init_c_list = [torch.normal(mean=c_tensor[c_observed_unfiltered_list[c_idx]==1], std=torch.ones(1)/1e3) for c_tensor in c_tensor_list]
 
                 # optimization
                 if local_model: # allow training a local model and optimize on top of it
                     _f_model_passed_in, _c_model_list_passed_in = None, None
                 else:
                     _f_model_passed_in, _c_model_list_passed_in = _f_model, _c_model_list
-                _cbo_m = DK_BO_AE_C_M(x_tensor, y_tensor, c_tensor_list, roi_filter, c_uci_filter_list, lr=lr, spectrum_norm=spectrum_norm, low_dim=low_dim,
+                _cbo_m = DK_BO_AE_C_M_DEC(x_tensor, y_tensor, c_tensor_list, roi_filter, c_uci_filter_list, lr=lr, spectrum_norm=spectrum_norm, low_dim=low_dim,
                                     n_init=n_init,  train_iter=train_times, regularize=regularize, dynamic_weight=False,  retrain_nn=retrain_nn, c_threshold_list=c_threshold_list,
-                                    max=max_val, pretrained_nn=ae, verbose=verbose, init_x=init_x, init_y=init_y, init_c_list=init_c_list, exact_gp=exact_gp, noise_constraint=roi_noise_constraint,
-                                    f_model=_f_model_passed_in, c_model_list=_c_model_list_passed_in, observed=observed, interpolate_prior=interpolate, noisy_obs=noisy_obs)
+                                    max=max_val, pretrained_nn=ae, verbose=verbose, init_x=init_x, init_y=init_y, init_c_x_list=init_c_x_list, init_c_list=init_c_list, exact_gp=exact_gp, noise_constraint=roi_noise_constraint,
+                                    f_model=_f_model_passed_in, c_model_list=_c_model_list_passed_in, observed=observed, c_observed_list=c_observed_list, interpolate_prior=interpolate, noisy_obs=noisy_obs)
 
                 _roi_f_lcb, _roi_f_ucb = _cbo_m.f_model.CI(x_tensor)
                 _roi_c_lcb_list, _roi_c_ucb_list  = model_list_CI(_cbo_m.c_model_list, x_tensor, DEVICE)
@@ -404,7 +413,7 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
                 assert query_num > 0
                 _acq = 'lcb' if f_c_total_iter - iter <= filter_interval else acq
                 _roi_beta_passed_in = _roi_beta  if not (default_beta) else 0 # allow it to calculate internal ROI_beta
-                _cbo_m.query_f_c(n_iter=query_num, acq=_acq, study_interval=10, study_res_path=save_path,  if_tqdm=False, 
+                _cbo_m.query_f_c_decoupled(n_iter=query_num, acq=_acq, study_interval=10, study_res_path=save_path,  if_tqdm=False, 
                                retrain_interval=retrain_interval, ci_intersection=ci_intersection, 
                                f_max_test_x_lcb=f_max_test_x_lcb, f_min_test_x_ucb=f_min_test_x_ucb,
                                c_max_test_x_lcb_list=c_max_test_x_lcb_list, c_min_test_x_ucb_list=c_min_test_x_ucb_list, 
@@ -443,14 +452,13 @@ def cbo_multi(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, cons
                 _iterator_info['ROI Y range'] = f"{roi_fy_min:.2f}, {roi_fy_max:.2f}"
                 _iterator_info['filter_on_intersect'] = filter_on_intersect
                 _iterator_info['beta'] = beta
-                _iterator_info['Acq Picked'] = f"c{_cbo_m._c_acq_list_max_value:.2e}, f{_cbo_m._f_acq_value:.2e}"
+                _iterator_info[f'Acq Picked'] = f"c{_cbo_m._c_acq_list_max_value:.2e}, f{_cbo_m._f_acq_value:.2e}"
                 _iterator_info['UCB Optimum'] = f"{_roi_f_ucb[max_pos]:.2e}"
                 iterator.set_postfix(_iterator_info)
 
                 # update model
-                
-                observed, _f_model, _c_model_list, f_lcb, f_ucb, c_lcb_list, c_ucb_list = finialize_rounds(util_array, roi_filter, _cbo_m, 
-                                                                                                            x_tensor, y_tensor, c_tensor_list, c_num, observed, train_times, low_dim, spectrum_norm, lr, exact_gp, interpolate, 
+                observed, c_observed_list, _f_model, _c_model_list, f_lcb, f_ucb, c_lcb_list, c_ucb_list = finialize_rounds(util_array, roi_filter, _cbo_m, 
+                                                                                                            x_tensor, y_tensor, c_tensor_list, c_num, observed, c_observed_list, train_times, low_dim, spectrum_norm, lr, exact_gp, interpolate, 
                                                                                                             global_noise_constraint=global_noise_constraint, regularize=regularize, ae=ae, retrain_nn=retrain_nn)
 
 

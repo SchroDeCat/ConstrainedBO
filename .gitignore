@@ -164,7 +164,9 @@ cython_debug/
 tmp/
 data/
 
-.DS_Store
 *.bck
 *.pdf
 *.png
+
+# ignore all ds_store files
+**/.DS_Store

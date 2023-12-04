@@ -8,3 +8,4 @@ from .menuStrategy import DKBO_OLP
 from .random import RandomOpt
 from .constrained import cbo, cbo_multi, baseline_cbo_m, baseline_scbo
 from .constrained_1step import cbo_multi_nontest
+from .constrained_decouple import cbo_multi_decoupled

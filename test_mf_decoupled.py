@@ -1,12 +1,8 @@
 """
-Script for general purpose tests
+Script for general purpose tests of decoupled query
 """
 from src.utils import Constrained_Data_Factory
-from src.opt import baseline_cbo_m, cbo_multi, baseline_scbo
-from src.SCBO import SCBO
-import torch
-import numpy as np
-import tqdm
+from src.opt import baseline_cbo_m, cbo_multi, baseline_scbo, cbo_multi_decoupled
 
 EXPS = [
     "rastrigin_1d",
@@ -26,14 +22,14 @@ EXPS = [
     'data_oct_Rosetta',
 ]
 METHODs = [
-    "cbo",
+    "cbo-decoupled",
     "qei",
     "scbo",
     "ts",
     "random",
     "cmes-ibo",
 ]
-PATH = "./res/mf"
+PATH = "./res/decoupled/"
 NOISE = False
 # NOISE = True
 
@@ -171,41 +167,8 @@ def experiment(
     print(
         f"{method} initial reward {y_tensor[:n_init][feasible_filter[:n_init]].squeeze()} while global max {y_tensor[feasible_filter].max().item()}"
     )
-    if method in ["cmes-ibo", "ts", "qei", "random"]:
-
-        regret = baseline_cbo_m(
-            x_tensor,
-            y_tensor,
-            c_tensor_list,
-            constraint_threshold_list=constraint_threshold_list,
-            constraint_confidence_list=constraint_confidence_list,
-            n_init=n_init,
-            n_repeat=n_repeat,
-            train_times=train_times,
-            n_iter=n_iter,
-            regularize=False,
-            low_dim=low_dim,
-            spectrum_norm=False,
-            retrain_interval=1,
-            acq=method,
-            verbose=True,
-            lr=1e-4,
-            name=name,
-            return_result=True,
-            retrain_nn=True,
-            plot_result=True,
-            save_result=True,
-            save_path=f"{PATH}",
-            fix_seed=True,
-            pretrained=False,
-            ae_loc=None,
-            exact_gp=exact_gp,
-            constrain_noise=constrain_noise,
-            interpolate=interpolate,
-        )
-
-    elif method == "cbo":
-        regret = cbo_multi(
+    if method == "cbo-decoupled":
+        regret = cbo_multi_decoupled(
             x_tensor,
             y_tensor,
             c_tensor_list,
@@ -242,42 +205,6 @@ def experiment(
             local_model=False,
             interpolate=interpolate,
         )
-
-    elif method == "scbo":
-        init_feasible_reward = y_tensor[:n_init][feasible_filter[:n_init]]
-        if init_feasible_reward.size(0) > 0:
-            max_reward = init_feasible_reward.max().item()
-        else:
-            max_reward = -torch.inf
-        max_global = y_tensor[feasible_filter].max().item()
-        regret = np.zeros([n_repeat, n_iter])
-        regret = baseline_scbo(
-            x_tensor=x_tensor,
-            y_func=y_func,
-            c_func_list=c_func_list,
-            max_global=max_global,
-            lb=cbo_factory.lb,
-            ub=cbo_factory.ub,
-            dim=cbo_factory.dim,
-            n_init=n_init,
-            n_repeat=n_repeat,
-            train_times=train_times,
-            low_dim=low_dim,
-            retrain_interval=1,
-            n_iter=n_iter,
-            verbose=True,
-            lr=lr,
-            name=name,
-            return_result=True,
-            plot_result=True,
-            save_result=True,
-            save_path=f"{PATH}",
-            fix_seed=True,
-            exact_gp=exact_gp,
-            constrain_noise=constrain_noise,
-            interpolate=interpolate,
-        )
-
     else:
         raise NotImplementedError(f"Method {method} no implemented")
 
@@ -288,8 +215,9 @@ def experiment(
 if __name__ == "__main__":
     # n_repeat = 15
     # n_iter = 200
-    n_repeat = 10
-    n_iter = 100
+    n_repeat = 2
+    # n_iter = 100
+    n_iter = 1000
 
     # for c_portion in tqdm.auto.tqdm(np.linspace(0.1, .9, 5)):
     # for c_portion in [1]:
@@ -297,10 +225,10 @@ if __name__ == "__main__":
     for c_portion in [5e-2, 1e-2]:
         for method in METHODs:
             # if method in ["cbo", "cmes-ibo", "qei", "scbo"]:
-            if method in ["cbo"]:
+            if method in ["cbo-decoupled"]:
                 print(c_portion)
                 experiment(
-                    exp=f"nano_mf_5d_1c",
+                    exp=f"rastrigin_1d",
                     n_init=5,
                     n_repeat=n_repeat,
                     n_iter=n_iter,
