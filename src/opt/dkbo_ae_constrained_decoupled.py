@@ -63,6 +63,13 @@ class DK_BO_AE_C_M_DEC(DK_BO_AE_C_M):
         self.init_c_x_list = kwargs.get("init_c_x_list", [self.x_tensor[:n_init] for _ in range(self.c_num)])
         self.c_n_init_list  = [self.init_c_x_list[c_idx].size(0) for c_idx in range(self.c_num)]
         self.init_c_list = kwargs.get("init_c_list", [c_tensor[:n_init] for c_tensor in self.c_tensor_list])
+
+        # assume all fed initial data are observed, separately track the following for training
+        self.init_x_observed = self.init_x.clone()
+        self.init_y_observed = self.init_y.clone()
+        self.init_c_x_observed_list = [init_c_x.clone() for init_c_x in self.init_c_x_list]
+        self.init_c_observed_list = [init_c.clone() for init_c in self.init_c_list]
+
         for c_idx in range(self.c_num):
             assert self.init_c_x_list[c_idx].size(0) == self.init_c_list[c_idx].size(0)
         if "init_x" in kwargs:
@@ -132,23 +139,14 @@ class DK_BO_AE_C_M_DEC(DK_BO_AE_C_M):
             self._c_length_scale_record_list = [self.c_model_list[c_idx].model.covar_module.base_kernel.base_kernel.lengthscale for c_idx in range(self.c_num)]
 
         if model_idx == -1:
-            model_observed_filter = np.array([True for _ in range(self.init_x.size(0))])
-            for query_idx, query_model_idx in enumerate(self._model_idx_list):
-                if query_model_idx != model_idx:
-                    model_observed_filter[query_idx+self.n_init] = False
-            self.f_model = DKL(self.init_x[model_observed_filter], self.init_y[model_observed_filter].squeeze(),
+            self.f_model = DKL(self.init_x_observed, self.init_y_observed.squeeze(),
                                     n_iter=self.train_iter, lr= self.lr, 
                                     low_dim=self.low_dim, pretrained_nn=self.pretrained_nn, retrain_nn=self.retrain_nn,
                                     spectrum_norm=self.spectrum_norm, exact_gp=self.exact, 
                                     noise_constraint=self.noise_constraint, output_scale_constraint=self.output_scale_constraint,
                                     interpolate = self.interpolate,)
         elif model_idx >= 0:
-            model_observed_filter = np.array([True for _ in range(self.init_c_x_list[model_idx].size(0))])
-            for query_idx, query_model_idx in enumerate(self._model_idx_list):
-                if query_model_idx != model_idx:
-                    model_observed_filter[query_idx+self.c_n_init_list[model_idx]] = False
-
-            self.c_model_list[model_idx] = DKL(self.init_c_x_list[model_idx][model_observed_filter], self.init_c_list[model_idx][model_observed_filter].squeeze(),
+            self.c_model_list[model_idx] = DKL(self.init_c_x_observed_list[model_idx], self.init_c_observed_list[model_idx].squeeze(),
                                 n_iter=self.train_iter, lr= self.lr, 
                                 low_dim=self.low_dim, pretrained_nn=self.pretrained_nn, retrain_nn=self.retrain_nn,
                                 spectrum_norm=self.spectrum_norm, exact_gp=self.exact, 
@@ -182,34 +180,34 @@ class DK_BO_AE_C_M_DEC(DK_BO_AE_C_M):
                 we still track all corresponding obs for each model for easier regret calculation
         '''
         self.init_x = torch.cat([self.init_x, self.x_tensor[candidate_idx].reshape(1,-1)], dim=0)
-        for c_idx in range(self.c_num):
-            self.init_c_x_list[c_idx] = torch.cat([self.init_c_x_list[c_idx], self.x_tensor[candidate_idx].reshape(1,-1)], dim=0)
-        
-
-        if not self.noisy_obs:
-            self.init_y = torch.cat([self.init_y, self.y_tensor[candidate_idx].reshape(1,-1)])
-            for c_idx in range(self.c_num):
-                self.init_c_list[c_idx] = torch.cat([self.init_c_list[c_idx], self.c_tensor_list[c_idx][candidate_idx].reshape(1,-1)])
-                for c_idx in range(self.c_num):
-                    assert self.init_c_x_list[c_idx].size(0) == self.init_c_list[c_idx].size(0)
-        else:
-            self.init_y = torch.cat([self.init_y, torch.normal(self.y_tensor[candidate_idx].reshape(1,-1), std=torch.ones(1)/1e1)])
-            for c_idx in range(self.c_num):
-                self.init_c_list[c_idx] = torch.cat([self.init_c_list[c_idx], torch.normal(self.c_tensor_list[c_idx][candidate_idx].reshape(1,-1), std=torch.ones(1)/1e3)])
-                for c_idx in range(self.c_num):
-                    assert self.init_c_x_list[c_idx].size(0) == self.init_c_list[c_idx].size(0)
+        _new_y_obs = self.y_tensor[candidate_idx].reshape(1,-1) 
+        _new_y_obs = torch.normal(_new_y_obs, std=torch.ones(1)/1e3)if self.noisy_obs else _new_y_obs
+        self.init_y = torch.cat([self.init_y, _new_y_obs])
         assert self.init_x.size(0) == self.init_y.size(0)
-        
+
+        for c_idx in range(self.c_num):
+            _new_c_obs = self.c_tensor_list[c_idx][candidate_idx].reshape(1,-1)
+            _new_c_obs = torch.normal(_new_c_obs, std=torch.ones(1)/1e1) if self.noisy_obs else _new_c_obs
+            self.init_c_list[c_idx] = torch.cat([self.init_c_list[c_idx], _new_c_obs])
+            self.init_c_x_list[c_idx] = torch.cat([self.init_c_x_list[c_idx], self.x_tensor[candidate_idx].reshape(1,-1)], dim=0)
+            assert self.init_c_x_list[c_idx].size(0) == self.init_c_list[c_idx].size(0)
 
         # update observed record
         if model_idx == -1:
-            self.observed[candidate_idx] = 1
-            observed_num = self.observed.sum()
+            self.observed[candidate_idx] += 1
+            self.init_x_observed = torch.cat([self.init_x_observed, self.x_tensor[candidate_idx].reshape(1,-1)], dim=0)
+            self.init_y_observed = torch.cat([self.init_y_observed, _new_y_obs])
         else:
-            self.c_observed_list[model_idx][candidate_idx] = 1
+            self.c_observed_list[model_idx][candidate_idx] += 1
+            self.init_c_x_observed_list[model_idx] = torch.cat([self.init_c_x_observed_list[model_idx], self.x_tensor[candidate_idx].reshape(1,-1)], dim=0)
+            self.init_c_observed_list[model_idx] = torch.cat([self.init_c_observed_list[model_idx], _new_c_obs])
+
+        observed_num = self.observed.sum() + sum([c_observed.sum() for c_observed in self.c_observed_list])
+        observed_num_act = sum([c_obs.size(0) for c_obs in self.init_c_observed_list]) + self.init_x_observed.size(0)
+        assert observed_num == observed_num_act
         return
 
-    def update_regret_decoupled(self, idx, candidate_idx, model_idx, check_validity:bool=True):
+    def update_regret_decoupled(self, idx, model_idx, check_validity:bool=True):
         '''
         Note: only use the target fidelity to calculate regret
         Input:
@@ -328,7 +326,7 @@ class DK_BO_AE_C_M_DEC(DK_BO_AE_C_M):
             self.periodical_retrain_decoupled(i, retrain_interval, model_idx=self._model_idx)
 
             # regret & early stop
-            self.update_regret_decoupled(idx=i, candidate_idx=candidate_idx, model_idx=self._model_idx, check_validity=check_validity)
+            self.update_regret_decoupled(idx=i, model_idx=self._model_idx, check_validity=check_validity)
 
             if self.regret[i] < 1e-10 and early_stop:
                 break

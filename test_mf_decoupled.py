@@ -243,7 +243,6 @@ def experiment(
             filter_beta=filter_beta,
             exact_gp=exact_gp,
             constrain_noise=constrain_noise,
-            local_model=False,
             interpolate=interpolate,
             cost_query = cost_query,
             check_validity=False,
