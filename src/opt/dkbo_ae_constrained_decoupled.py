@@ -204,22 +204,26 @@ class DK_BO_AE_C_M_DEC(DK_BO_AE_C_M):
         # update observed record
         if model_idx == -1:
             self.observed[candidate_idx] = 1
+            observed_num = self.observed.sum()
         else:
             self.c_observed_list[model_idx][candidate_idx] = 1
+        return
 
-    def update_regret_decoupled(self, idx, model_idx):
+    def update_regret_decoupled(self, idx, candidate_idx, model_idx, check_validity:bool=True):
         '''
         Note: only use the target fidelity to calculate regret
         Input:
             idx: the index of the iteration
+            candidate_idx: the index of the pts to be evaluated
             model_idx: the index of the model to be evaluated
         
         '''
+        self.feasiblility_check_list = [False]
         if model_idx == -1:
-            feasiblility_check_list = [self.init_c_list[c_idx][idx] >= self.c_threshold_list[c_idx] for c_idx in range(self.c_num)]
-            if all(feasiblility_check_list):
+            self.feasiblility_check_list = [self.init_c_list[c_idx][-1] >= self.c_threshold_list[c_idx] for c_idx in range(self.c_num)]
+            if all(self.feasiblility_check_list) or not check_validity:
                 # when there is feasible points
-                reward = self.init_y[idx]
+                reward = self.init_y[-1]
                 self.regret[idx] = self.maximum - reward
                 self.regret[:idx] = np.minimum.accumulate(self.regret[:idx]) # guarantee monotonicity
                 return
@@ -229,7 +233,7 @@ class DK_BO_AE_C_M_DEC(DK_BO_AE_C_M):
 
 
 
-    def query_f_c_decoupled(self, n_iter:int=10, acq="ci", retrain_interval:int=1, **kwargs):
+    def query_f_c_decoupled(self, n_iter:int=10, acq="ci", retrain_interval:int=1, check_validity=False, **kwargs):
         '''
         Note:
             1. f and c are decoupled query
@@ -249,6 +253,7 @@ class DK_BO_AE_C_M_DEC(DK_BO_AE_C_M):
         f_min_test_x_ucb = kwargs.get("f_min_test_x_ucb", None)
         c_max_test_x_lcb_list = kwargs.get("c_max_test_x_lcb_list", None)
         c_min_test_x_ucb_list = kwargs.get("c_min_test_x_ucb_list", None)
+        cost_query = kwargs.get('cost_query', np.ones(self.c_num))
 
         beta = kwargs.get("beta", 1)
         _delta = kwargs.get("delta", .01)
@@ -299,7 +304,7 @@ class DK_BO_AE_C_M_DEC(DK_BO_AE_C_M):
                 _c_acq_list = torch.tensor([float('-inf') for _ in range(self.c_num)])
                 for c_idx, c_uci_filter in enumerate(self.c_uci_filter_list):
                     if sum(c_uci_filter) > 0:
-                        _c_acq_list[c_idx] = self.c_model_list[c_idx].acq_val[_candidate_idx_c_list[c_idx]]
+                        _c_acq_list[c_idx] = self.c_model_list[c_idx].acq_val[_candidate_idx_c_list[c_idx]] / cost_query[c_idx]
                 _c_acq_list_max = torch.max(_c_acq_list, dim=0)
 
                 self._c_acq_list_max_value = _c_acq_list_max.values 
@@ -323,7 +328,7 @@ class DK_BO_AE_C_M_DEC(DK_BO_AE_C_M):
             self.periodical_retrain_decoupled(i, retrain_interval, model_idx=self._model_idx)
 
             # regret & early stop
-            self.update_regret_decoupled(idx=i, model_idx=self._model_idx)
+            self.update_regret_decoupled(idx=i, candidate_idx=candidate_idx, model_idx=self._model_idx, check_validity=check_validity)
 
             if self.regret[i] < 1e-10 and early_stop:
                 break

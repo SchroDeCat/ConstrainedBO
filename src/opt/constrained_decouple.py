@@ -150,7 +150,6 @@ def export_results(save_path:str, name:str, n_repeat:int, n_iter:int, acq:str, l
                     init_strategy='none', cluster_interval=filter_interval, acq=acq, lr=lr, ucb_strategy="exact", ci_intersection=ci_intersection, verbose=verbose,)
 
 
-
 def cbo_multi_decoupled(x_tensor, y_tensor, c_tensor_list, constraint_threshold_list, constraint_confidence_list, 
               n_init=10, n_repeat=2, train_times=10, beta=2, regularize=False, low_dim=True, 
             spectrum_norm=False, retrain_interval=1, n_iter=40, filter_interval=1, acq="ci", 
@@ -158,7 +157,7 @@ def cbo_multi_decoupled(x_tensor, y_tensor, c_tensor_list, constraint_threshold_
             plot_result=False, save_result=False, save_path=None, fix_seed=False,  
             pretrained=False, ae_loc=None, _minimum_pick = 10, 
             _delta = 0.01, filter_beta=.05, exact_gp=False, constrain_noise=False, 
-            local_model=True, interpolate=True, noisy_obs=False):
+            local_model=True, interpolate=True, noisy_obs=False, check_validity=False, **kwargs):
     '''
     Proposed ROI based method, default acq = ci
     Support Multiple Constraints
@@ -198,10 +197,12 @@ def cbo_multi_decoupled(x_tensor, y_tensor, c_tensor_list, constraint_threshold_
     else:
         global_noise_constraint = None
         roi_noise_constraint = None
+    
     _minimum_pick = min(_minimum_pick, n_init)
     c_threshold_list = [norm.ppf(constraint_confidence, loc=constraint_threshold, scale=1) 
                         for constraint_confidence, constraint_threshold in zip(constraint_confidence_list, constraint_threshold_list)]
     c_num = len(c_tensor_list)
+    cost_query = kwargs.get('cost_query', np.ones(c_num)) # cost ratio compared to querying f
     feasibility_filter_real = c_tensor_list[0] > c_threshold_list[0]
     for c_idx in range(c_num):
         feasibility_filter_real.logical_and(c_tensor_list[c_idx] > c_threshold_list[c_idx])
@@ -245,6 +246,8 @@ def cbo_multi_decoupled(x_tensor, y_tensor, c_tensor_list, constraint_threshold_
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         for rep in tqdm.tqdm(range(n_repeat), desc=f"Experiment Rep"):
+            number_f_query = 0
+            number_f_query_valid = 0
             # set seed
             if fix_seed:
                 _seed = rep * 20 + n_init
@@ -356,12 +359,22 @@ def cbo_multi_decoupled(x_tensor, y_tensor, c_tensor_list, constraint_threshold_
 
                 # ROI data
                 filter_ratio = roi_filter.sum()/data_size
-                observed_unfiltered = np.min([observed, roi_filter.numpy()], axis=0)      # observed and not filtered outs
-                init_x = x_tensor[observed_unfiltered==1]
+                if local_model:
+                    observed_unfiltered = np.min([observed, roi_filter.numpy()], axis=0)      # observed and not filtered outs
+                else:
+                    observed_unfiltered = observed      # observed and not filtered outs
+                observed_num = observed_unfiltered.sum()
+                if local_model or iter == 1:
+                    init_x = x_tensor[observed_unfiltered==1]
+                else:
+                    init_x = _cbo_m.init_x
 
                 c_observed_unfiltered_list = [None for _ in range(c_num)]
                 for c_idx in range(c_num):
-                    c_observed_unfiltered_list[c_idx] = np.min([c_observed_list[c_idx], roi_filter.numpy()], axis=0)
+                    if local_model or iter == 1:
+                        c_observed_unfiltered_list[c_idx] = np.min([c_observed_list[c_idx], roi_filter.numpy()], axis=0)
+                    else:
+                        c_observed_unfiltered_list[c_idx] = _cbo_m.init_c_list[c_idx]
                     init_c_x_list = [x_tensor[c_observed_unfiltered_list[c_idx]==1] for c_idx in range(c_num)]
 
                 if not noisy_obs:
@@ -417,10 +430,13 @@ def cbo_multi_decoupled(x_tensor, y_tensor, c_tensor_list, constraint_threshold_
                                retrain_interval=retrain_interval, ci_intersection=ci_intersection, 
                                f_max_test_x_lcb=f_max_test_x_lcb, f_min_test_x_ucb=f_min_test_x_ucb,
                                c_max_test_x_lcb_list=c_max_test_x_lcb_list, c_min_test_x_ucb_list=c_min_test_x_ucb_list, 
-                               beta=_roi_beta_passed_in)
+                               beta=_roi_beta_passed_in, cost_query=cost_query, check_validity=check_validity)
 
                 # update records
                 _step_size = iter + query_num
+                number_f_query += (_cbo_m._model_idx_list == -1).sum()
+                if query_num == 1:
+                    number_f_query_valid += all(_cbo_m.feasiblility_check_list)
                 reg_record[rep, iter:_step_size] = _cbo_m.regret[-query_num:]
                 ratio_record[rep, iter:_step_size] = min(filter_ratio, ratio_record[rep, iter-1]) if iter > 0 else filter_ratio
 
@@ -451,6 +467,7 @@ def cbo_multi_decoupled(x_tensor, y_tensor, c_tensor_list, constraint_threshold_
                 _iterator_info['Sci Accuracy'] = f"{(c_sci_filter.logical_and(feasible_filter).sum()/c_sci_filter.sum()).detach().item():.2%}"
                 _iterator_info['ROI Y range'] = f"{roi_fy_min:.2f}, {roi_fy_max:.2f}"
                 _iterator_info['filter_on_intersect'] = filter_on_intersect
+                _iterator_info['# F Queries'] = f"{number_f_query_valid}/{number_f_query}"
                 _iterator_info['beta'] = beta
                 _iterator_info[f'Acq Picked'] = f"c{_cbo_m._c_acq_list_max_value:.2e}, f{_cbo_m._f_acq_value:.2e}"
                 _iterator_info['UCB Optimum'] = f"{_roi_f_ucb[max_pos]:.2e}"

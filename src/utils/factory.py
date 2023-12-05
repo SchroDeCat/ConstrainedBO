@@ -207,7 +207,58 @@ class Constrained_Data_Factory(Data_Factory):
             # return self.x_tensor, self.y_tensor, self.c_tensor_list
         else:
             return self.x_tensor, self.objective, self.c_func_list
+
+    def rastrigin_1D_1C_mf(self, scbo_format:bool=False, **kwargs) -> List[tensor]:
+        """https://www.sfu.ca/~ssurjano/rastr.html"""
+        self._name = 'Rastrigin 1D MF'
+        scan_c = kwargs.get('c_scan', False) # if moving the threshold
+
+        dim = 1
+        self.dim = dim
+        self.lb, self.ub = torch.ones(dim) * -5, torch.ones(dim) * 5
+        self.lb, self.ub =self.lb.to(device=device, dtype=dtype), self.ub.to(device=device, dtype=dtype)
         
+        self.objective = lambda x: -Rastrigin(dim=1)(x) + np.random.uniform(-0.1, 0.1, size=1)
+        # self.c_func1 = lambda x: -(x+3)**2 + 0.64  # |x - -2| < 0.5
+        # self.c_func1 = lambda x: -torch.abs(x+3.1)**(1/2) + .8 **(1/2) 
+        self.c_func1 = lambda x: -Rastrigin(dim=1)(x) + np.random.normal(0, 0.1, size=1) + x/2
+        self.c_func2 = lambda x: -Rastrigin(dim=1)(x) - x/10
+
+        self.x_tensor = self._generate_x_tensor(dim=dim, num=self._num_pts).to(device=device, dtype=dtype)
+        self.x_tensor_range = unnormalize(self.x_tensor, (self.lb, self.ub))
+        self.y_tensor = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.objective, self.x_tensor).unsqueeze(-1)
+        self.c_tensor1 = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.c_func1, self.x_tensor).unsqueeze(-1)
+        self.c_tensor2 = Constrained_Data_Factory.evaluate_func(self.lb, self.ub, self.c_func2, self.x_tensor).unsqueeze(-1)
+        # self.c_tensor_list = [self.c_tensor1, self.c_tensor2]
+        self.c_tensor_list = [self.c_tensor1]
+
+        # feasible region identification
+        self.constraint_confidence_list = [0.5, 0.5]
+        if scan_c:
+            self.c_portion = kwargs.get('c_portion', .1) # portion of feasible region
+            self.constraint_threshold_list = [np.quantile(self.c_tensor1, 1 - self.c_portion)] 
+        else:
+            self.constraint_threshold_list = [0]
+            self.c_portion = (sum(self.c_tensor1 > 0) / self.c_tensor1.size(0)).detach().item()
+        self.feasible_filter = feasible_filter_gen(self.c_tensor_list, self.constraint_threshold_list)
+        self.c_func1_scbo = lambda x: -self.c_func1(x) + self.constraint_threshold_list[0]
+        self.c_func2_scbo = lambda x: -self.c_func2(x) + self.constraint_threshold_list[1]
+        # self.c_func_list = [self.c_func1_scbo, self.c_func2_scbo]
+        self.c_func_list = [self.c_func1_scbo]
+
+        assert torch.any(self.feasible_filter)
+
+        __feasible_y = torch.where(self.feasible_filter, self.y_tensor.squeeze(), float('-inf'))
+        self.maximum = __feasible_y.max()
+        self.max_arg = __feasible_y.argmax()
+
+        if not scbo_format:
+            return self.x_tensor_range, self.y_tensor, self.c_tensor_list
+            # return self.x_tensor, self.y_tensor, self.c_tensor_list
+        else:
+            return self.x_tensor, self.objective, self.c_func_list
+        
+
     def ackley_5D_2C(self, scbo_format:bool=False) -> List[tensor]:
         '''
         Note: due to earlier problem, it is actually 4d. but feeded to a 10 d function. and only on diagonal.

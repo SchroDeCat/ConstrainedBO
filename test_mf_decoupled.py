@@ -3,8 +3,10 @@ Script for general purpose tests of decoupled query
 """
 from src.utils import Constrained_Data_Factory
 from src.opt import baseline_cbo_m, cbo_multi, baseline_scbo, cbo_multi_decoupled
+import numpy as np
 
 EXPS = [
+    "rastrigin_1d_2c_mf",
     "rastrigin_1d",
     "ackley_5d",
     "ackley_10d",
@@ -94,6 +96,42 @@ def experiment(
         filter_beta = 1
         beta = 2.90
         cbo_factory.visualize_1d()
+        cost_query = np.ones(1)
+    elif exp == "rastrigin_1d_2c_mf":  # rastrigin 1D for mf
+        cbo_factory = Constrained_Data_Factory(
+            num_pts=20000 if c_portion is None else 1000
+        )
+        scbo = "scbo" in method
+        if not c_portion is None:  # scanning the portion
+            if scbo:
+                    x_tensor, y_func, c_func_list = cbo_factory.rastrigin_1D_1C_mf(
+                        scbo_format=scbo, c_scan=True, c_portion=c_portion
+                    )
+            else:
+                x_tensor, y_tensor, c_tensor_list = cbo_factory.rastrigin_1D_1C_mf(
+                    scbo_format=scbo, c_scan=True, c_portion=c_portion
+                )
+        else:
+            if scbo:
+                x_tensor, y_func, c_func_list = cbo_factory.rastrigin_1D_1C_mf(
+                    scbo_format=scbo
+                )
+            else:
+                x_tensor, y_tensor, c_tensor_list = cbo_factory.rastrigin_1D_1C_mf(
+                    scbo_format=scbo
+                )
+        constraint_threshold_list, constraint_confidence_list = (
+            cbo_factory.constraint_threshold_list,
+            cbo_factory.constraint_confidence_list,
+        )
+        feasible_filter = cbo_factory.feasible_filter
+        y_tensor = cbo_factory.y_tensor
+        constrain_noise = False
+
+        filter_beta = 1
+        beta = 2.90
+        cbo_factory.visualize_1d()
+        cost_query = np.ones(3)
 
     elif exp == "ackley_5d":
         cbo_factory = Constrained_Data_Factory(num_pts=20000 // 2)
@@ -115,6 +153,7 @@ def experiment(
         beta = 0.1  # actually is 10 here?
         filter_beta = 4
         constrain_noise = True
+        cost_query = np.ones(2)
 
     elif exp == "water_converter_32d_neg_3c":
         cbo_factory = Constrained_Data_Factory(num_pts=10000)
@@ -137,6 +176,7 @@ def experiment(
         constrain_noise = False
         filter_beta = 20
         beta = 20
+        cost_query = np.ones(3)
     elif exp == "nano_mf_5d_1c":
         cbo_factory = Constrained_Data_Factory(num_pts=5000)
         scbo = "scbo" in method
@@ -160,6 +200,7 @@ def experiment(
         constrain_noise = False
         filter_beta = 2
         beta = 2
+        cost_query = np.ones(1)
     else:
         raise NotImplementedError(f"Exp {exp} no implemented")
 
@@ -204,6 +245,8 @@ def experiment(
             constrain_noise=constrain_noise,
             local_model=False,
             interpolate=interpolate,
+            cost_query = cost_query,
+            check_validity=False,
         )
     else:
         raise NotImplementedError(f"Method {method} no implemented")
@@ -221,14 +264,15 @@ if __name__ == "__main__":
 
     # for c_portion in tqdm.auto.tqdm(np.linspace(0.1, .9, 5)):
     # for c_portion in [1]:
+    for c_portion in [.9, .7]:
     # for c_portion in [.3, .5, .7]:
-    for c_portion in [5e-2, 1e-2]:
+    # for c_portion in [5e-2, 1e-2]:
         for method in METHODs:
             # if method in ["cbo", "cmes-ibo", "qei", "scbo"]:
             if method in ["cbo-decoupled"]:
                 print(c_portion)
                 experiment(
-                    exp=f"rastrigin_1d",
+                    exp=f"rastrigin_1d_2c_mf",
                     n_init=5,
                     n_repeat=n_repeat,
                     n_iter=n_iter,
