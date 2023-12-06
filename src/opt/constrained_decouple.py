@@ -446,7 +446,7 @@ def cbo_multi_decoupled(x_tensor, y_tensor, c_tensor_list, constraint_threshold_
                 # _iterator_info['Csi Accuracy'] = f"{(c_sci_filter.logical_and(feasible_filter).sum()/c_sci_filter.sum()).detach().item():.2%}"
                 _iterator_info['Sci Accuracy'] = f"{(c_sci_filter.logical_and(feasible_filter).sum()/c_sci_filter.sum()).detach().item():.2%}"
                 _iterator_info['ROI Y range'] = f"{roi_fy_min:.2f}, {roi_fy_max:.2f}"
-                _iterator_info['filter_on_intersect'] = filter_on_intersect
+                # _iterator_info['filter_on_intersect'] = filter_on_intersect
                 _iterator_info['# F Queries'] = f"{number_f_query_valid}/{number_f_query}"
                 _iterator_info['beta'] = beta
                 _iterator_info[f'Acq Picked'] = f"c{_cbo_m._c_acq_list_max_value:.2e}, f{_cbo_m._f_acq_value:.2e}"
