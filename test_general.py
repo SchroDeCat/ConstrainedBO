@@ -2,7 +2,7 @@
 Script for general purpose tests
 '''
 from src.utils import Constrained_Data_Factory
-from src.opt import baseline_cbo_m, cbo_multi, baseline_scbo
+from src.opt import baseline_cbo_m, cbo_multi, baseline_scbo, config_multi
 from src.SCBO import SCBO
 import torch
 import numpy as np
@@ -13,7 +13,7 @@ import tqdm
 EXPS = ['rastrigin_1d', 'rastrigin_10d', 'ackley_5d', 'ackley_10d','rosenbrock_5d', 'rosenbrock_4d', 
         'water_converter_32d', 'water_converter_32d_neg', 'water_converter_32d_neg_3c', 'gpu_performance_16d', 
         'vessel_4d_3c', 'car_cab_7d_8c', 'spring_3d_6c']
-METHODs = ['cbo',  'qei', 'scbo', 'ts','random', 'cmes-ibo', ]
+METHODs = ['cbo',  'qei', 'scbo', 'ts','random', 'cmes-ibo','config']
 
 
 def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_times:int=5, n_iter:int=20, n_init:int=10, 
@@ -153,6 +153,9 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
         # beta = 2
         filter_beta = 2
         beta = 2
+        if method == 'config':
+            filter_beta = 10
+            beta = 10
 
     elif exp == "spring_3d_6c":
         # cbo_factory = Constrained_Data_Factory(num_pts=10000)
@@ -210,7 +213,7 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
                                 exact_gp=exact_gp, constrain_noise=constrain_noise,
                                 interpolate=interpolate,)
         
-    elif method == 'cbo':
+    elif method in ['cbo']:
 
         # regret = cbo_multi(x_tensor, y_tensor, c_tensor_list, 
         #             constraint_threshold_list=constraint_threshold_list, constraint_confidence_list=constraint_confidence_list,
@@ -228,6 +231,16 @@ def experiment(exp:str='rastrigin_1d', method:str='qei', n_repeat:int=2, train_t
                     plot_result=True, save_result=True, save_path='./res/cbo/tmlr', fix_seed=True,  pretrained=False, ae_loc=None, 
                     _minimum_pick = 10, _delta = 0.01, beta=beta, filter_beta=filter_beta, exact_gp=exact_gp, constrain_noise=constrain_noise, 
                     local_model=False,  interpolate=interpolate,)
+    elif method in ['config']:
+        interpolate = False
+        regret = config_multi(x_tensor, y_tensor, c_tensor_list, 
+            constraint_threshold_list=constraint_threshold_list, constraint_confidence_list=constraint_confidence_list,
+            n_init=n_init, n_repeat=n_repeat, train_times=train_times, regularize=False, low_dim=low_dim,
+            spectrum_norm=False, retrain_interval=1, n_iter=n_iter, filter_interval=1, acq="ucb", 
+            ci_intersection=False, verbose=True, lr=1e-4, name=name, return_result=True, retrain_nn=True,
+            plot_result=True, save_result=True, save_path='./res/config', fix_seed=True,  pretrained=False, ae_loc=None, 
+            _minimum_pick = 10, _delta = 0.01, beta=beta, filter_beta=filter_beta, exact_gp=exact_gp, constrain_noise=constrain_noise, 
+            local_model=False,  interpolate=interpolate,)
 
     elif method =='scbo':
         init_feasible_reward = y_tensor[:n_init][feasible_filter[:n_init]]
@@ -280,7 +293,9 @@ if __name__ == "__main__":
     # n_iter = 50
     # train_times = 50
     # n_repeat = 2
-    n_repeat = 15
+    # n_repeat = 1
+    n_repeat = 5
+    # n_repeat = 15
     n_init = 5
     n_init2 = 20
     n_init3 = 10
@@ -288,7 +303,14 @@ if __name__ == "__main__":
     n_iter = 200
     # n_iter = 50
     # train_times = 5
-    train_times = 10
+    # train_times = 10
+    train_times = 1
+
+    # for exp in EXPS:
+    for exp in ['rastrigin_1d', 'ackley_5d', 'water_converter_32d_neg_3c', 'vessel_4d_3c', 'car_cab_7d_8c', 'spring_3d_6c']:
+        method = 'config'
+        print(f"Experiment {exp} with method {method}")
+        experiment(exp=exp, n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method=method)
 
     # experiment(n_init=5, method='qei')
     # experiment(n_init=5, method='ts')
@@ -296,9 +318,14 @@ if __name__ == "__main__":
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=40, method='scbo')
     # experiment(n_init=5, method='cbo', n_iter=200)
 
+    # scan the portion
+    # for c_portion in np.linspace(.1, .9, 5):
+    #     for method in ['cbo', 'cmes-ibo']:
+    #         experiment(exp='rastrigin_1d', n_init=10, n_repeat=5, n_iter=2000, train_times=1, method=method, c_portion=c_portion)
     for c_portion in np.linspace(.1, .9, 5):
-        for method in ['cbo', 'cmes-ibo']:
-            experiment(exp='rastrigin_1d', n_init=10, n_repeat=5, n_iter=2000, train_times=1, method=method, c_portion=c_portion)
+        method = 'config'
+        experiment(exp='rastrigin_1d', n_init=10, n_repeat=5, n_iter=2000, train_times=1, method=method, c_portion=c_portion)
+
 
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='cbo')
     # experiment(exp='rastrigin_1d', n_init=n_init, n_repeat=n_repeat, n_iter=n_iter, train_times=train_times, method='qei')

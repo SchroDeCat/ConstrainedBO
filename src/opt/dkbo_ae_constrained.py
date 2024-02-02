@@ -467,6 +467,63 @@ class DK_BO_AE_C_M():
         else:
             self.regret[idx] = self.max_regret
 
+
+    def query_f(self, n_iter:int=10, acq="ci", retrain_interval:int=1, **kwargs):
+        '''
+        First Stage: Query only f
+        '''
+        assert self.init_x.size(0) == self.init_c_list[0].size(0)
+        assert self.init_x.size(0) == self.init_y.size(0)
+        self.regret = np.zeros(n_iter)
+        if_tqdm = kwargs.get("if_tqdm", False)
+        early_stop = kwargs.get("early_stop", True)
+        iterator = tqdm.tqdm(range(n_iter)) if if_tqdm else range(n_iter)
+        util_array = np.arange(self.data_size)
+
+        beta = kwargs.get("beta", 1)
+        _delta = kwargs.get("delta", .01)
+
+        real_beta = beta <= 0 # if using analytic beta
+        _candidate_idx_list = np.zeros(n_iter)
+        ### optimization loop
+        for i in iterator:
+            _candidate_idx_c_list = [None for i in range(self.c_num)]
+            _acq = 'ucb'
+            # _acq = 'lcb' if i // 2 and acq == 'ci' else 'ci'
+            if real_beta:
+                _search_space_size = self.x_tensor.size(0)
+                _constraint_num = self.c_num
+                beta = (2 * np.log((_search_space_size * 2 * (_constraint_num + 1) * n_iter /_delta))) ** 0.5
+            # acq values
+            _candidate_idx_f = self.f_model.next_point(self.x_tensor[self.roi_filter], acq, return_idx=True, beta=beta,)
+ 
+            # locate max acq
+
+            _f_acq = self.f_model.acq_val[_candidate_idx_f]
+            _c_acq_list = torch.tensor([float('-inf') for _ in range(self.c_num)])
+            _c_acq_list_max = torch.max(_c_acq_list, dim=0)
+
+            self._c_acq_list_max_value = _c_acq_list_max.values 
+            self._f_acq_value = _f_acq
+            # only care about ucb_{f,t}
+            candidate_idx = util_array[self.roi_filter][_candidate_idx_f]
+
+            self._candidate_idx = candidate_idx
+            # update obs
+            _candidate_idx_list[i] = candidate_idx
+            self.update_obs(candidate_idx)
+
+            # Retrain
+            self.periodical_retrain(i, retrain_interval)
+
+            # regret & early stop
+            self.update_regret(idx=i)
+
+            if self.regret[i] < 1e-10 and early_stop:
+                break
+            if if_tqdm:
+                iterator.set_postfix({"regret":self.regret[i], "Internal_beta": beta})
+
     def query_f_c(self, n_iter:int=10, acq="ci", retrain_interval:int=1, **kwargs):
         '''
         First Stage: Query both f and c simultaneously
